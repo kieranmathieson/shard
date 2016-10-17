@@ -1,9 +1,10 @@
 <?php
 /**
- * Created by PhpStorm.
- * User: kieran
- * Date: 10/9/16
- * Time: 1:54 PM
+ * @file
+ * Reports fields that are allowed to host shards, according to site
+ * configuration.
+ *
+ * @author Kieran Mathieson
  */
 
 namespace Drupal\sloth\Services;
@@ -47,6 +48,7 @@ class EligibleFields implements EligibleFieldsInterface {
 
   /**
    * EligibleFields constructor.
+   *
    * @param \Drupal\Core\Config\ConfigFactoryInterface $config_factory
    * @param \Drupal\Core\Entity\EntityFieldManagerInterface $entity_field_manager
    */

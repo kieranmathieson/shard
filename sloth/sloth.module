@@ -11,6 +11,7 @@ use Drupal\Core\Form\FormStateInterface;
 //use Drupal\Component\Utility\Html;
 use Drupal\sloth\SlothTagHandler;
 //use Drupal\views\ViewExecutable;
+use Drupal\sloth\Services\EligibleFields;
 
 /**
  * Implements hook_help().
@@ -40,7 +41,7 @@ function sloth_form_alter(&$form, FormStateInterface $form_state, $form_id) {
   if ( method_exists($form_state->getFormObject(), 'getEntity') ) {
     //Aye.
     //Get the fields that are eligible to be slothed.
-    $eligible_fields_finder = new \Drupal\sloth\EligibleFields(
+    $eligible_fields_finder = new EligibleFields(
       \Drupal::service('config.factory'),
       \Drupal::service('entity_field.manager')
     );

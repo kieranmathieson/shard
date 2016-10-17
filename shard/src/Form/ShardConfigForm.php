@@ -1,12 +1,12 @@
 <?php
 /**
  * @file
- * Configuration for the sloth module.
+ * Configuration for the shard module.
  *
  * @author Kieran Mathieson
  */
 
-namespace Drupal\sloth\Form;
+namespace Drupal\shard\Form;
 
 use Drupal\Core\Entity\EntityTypeBundleInfoInterface;
 use Drupal\Core\Form\FormBase;
@@ -17,7 +17,7 @@ use Drupal\Core\Entity\EntityDisplayRepositoryInterface;
 use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\TypedData\TypedDataManagerInterface;
 
-class SlothConfigForm extends FormBase {
+class ShardConfigForm extends FormBase {
 
   /* @var \Symfony\Component\DependencyInjection\ContainerInterface $container */
   protected $container;
@@ -63,10 +63,7 @@ class SlothConfigForm extends FormBase {
   }
 
   /**
-   * Build the simple form.
-   *
-   * A build form method constructs an array that defines how markup and
-   * other form elements are included in an HTML form.
+   * Build the shard config form.
    *
    * @param array $form
    *   Default form array structure.
@@ -78,19 +75,25 @@ class SlothConfigForm extends FormBase {
    */
   public function buildForm(array $form, FormStateInterface $form_state) {
     //Get current settings.
-    $config = $this->config_factory->get('sloth.settings');
+    $config = $this->config_factory->get('shard.settings');
     $current_content_types = $config->get('content_types')
       ? $config->get('content_types') : [];
     $current_fields = $config->get('fields')
       ? $config->get('fields') : [];
     $current_view_modes = $config->get('view_modes')
       ? $config->get('view_modes') : [];
-    //Field types that can have sloths inserted. They are CK enabled. most likely.
+    //Field types that can have shards inserted. They are CK enabled. most likely.
     $current_field_types = $config->get('field_types')
       ? explode(',', $config->get('field_types')) : ['text_with_summary', 'text_long' ];
 
     //Don't flatten the results in $form_state.
     $form['#tree'] = TRUE;
+
+    //Help.
+    $form['instructions'] = [
+      '#markup' => '<p>' . $this->t('Choose where you would like shards '
+        . 'to be allowed. Only fields meeting all criteria can host shards.')
+    ];
 
     //Get the content types.
     $node_bundle_info = $this->bundle_info_manager->getBundleInfo('node');
@@ -116,11 +119,12 @@ class SlothConfigForm extends FormBase {
     //Loop over content types.
     foreach ($node_bundle_info as $bundle_machine_name=>$bundle_label_element) {
       //Get the fields in a content type.
-      $bundle_fields = $this->entity_field_manager->getFieldDefinitions('node', $bundle_machine_name);
+      $bundle_fields = $this->entity_field_manager
+        ->getFieldDefinitions('node', $bundle_machine_name);
       //Loop across the field definitions.
       /* @var \Drupal\field\Entity\FieldConfig $field_def */
       foreach($bundle_fields as $field_name => $field_def) {
-        //Is the field of a type we allow to have sloth info in?
+        //Is the field of a type we allow to have shard info in?
         $field_type = $field_def->getType();
         if ( in_array($field_type, $current_field_types) ) {
           //This field is a candidate.
@@ -129,7 +133,9 @@ class SlothConfigForm extends FormBase {
             $candidate_fields[$field_name] =
               new CandidateField($field_name, (string)$this->t($field_def->getLabel()));
           }
-          $candidate_fields[$field_name]->addContentType( (string)$this->t($bundle_label_element['label']) );
+          $candidate_fields[$field_name]->addContentType(
+            (string) $this->t($bundle_label_element['label'])
+          );
         }
       }//End foreach field in bundle.
     }//End for each bundle.
@@ -204,14 +210,9 @@ class SlothConfigForm extends FormBase {
       '#default_value' => implode(',',$current_field_types),
     ];
 
-    // Group submit handlers in an actions element with a key of "actions" so
-    // that it gets styled correctly, and so that other modules may add actions
-    // to the form. This is not required, but is convention.
     $form['actions'] = [
       '#type' => 'actions',
     ];
-
-    // Add a submit button that handles the submission of the form.
     $form['actions']['submit'] = [
       '#type' => 'submit',
       '#value' => $this->t('Submit'),
@@ -223,22 +224,15 @@ class SlothConfigForm extends FormBase {
   /**
    * Getter method for Form ID.
    *
-   * The form ID is used in implementations of hook_form_alter() to allow other
-   * modules to alter the render array built by this form controller.  it must
-   * be unique site wide. It normally starts with the providing module's name.
-   *
    * @return string
    *   The unique ID of the form defined by this class.
    */
   public function getFormId() {
-    return 'sloth_config_form';
+    return 'shard_config_form';
   }
 
   /**
    * Implements form validation.
-   *
-   * The validateForm method is the default method called to validate input on
-   * a form.
    *
    * @param array $form
    *   The render array of the currently built form.
@@ -247,17 +241,17 @@ class SlothConfigForm extends FormBase {
    */
   public function validateForm(array &$form, FormStateInterface $form_state) {
     //At least one content type should be selected.
-    if ( ! $this->at_least_one_chosen($form_state, 'content_types')) {
+    if ( ! $this->atLeastOneChosen($form_state, 'content_types')) {
       $form_state->setErrorByName('content_types',
         $this->t('Please choose at least one content type.'));
     }
     //At least one field should be selected.
-    if ( ! $this->at_least_one_chosen($form_state, 'fields')) {
+    if ( ! $this->atLeastOneChosen($form_state, 'fields')) {
       $form_state->setErrorByName('fields',
         $this->t('Please choose at least one field.'));
     }
     //At least one view mode should be selected.
-    if ( ! $this->at_least_one_chosen($form_state, 'view_modes')) {
+    if ( ! $this->atLeastOneChosen($form_state, 'view_modes')) {
       $form_state->setErrorByName('view_modes',
         $this->t('Please choose at least one view mode.'));
     }
@@ -303,11 +297,12 @@ class SlothConfigForm extends FormBase {
 
   /**
    * Was at least one option chosen from a checkbox list?
+   *
    * @param FormStateInterface $form_state Form state.
    * @param string $field_name Field to check.
    * @return bool True if a value was chosen, else false.
    */
-  protected function at_least_one_chosen(FormStateInterface $form_state, $field_name) {
+  protected function atLeastOneChosen(FormStateInterface $form_state, $field_name) {
     $submitted = $form_state->getValue($field_name);
     $chosen = FALSE;
     foreach ($submitted as $key => $is_selected) {
@@ -322,15 +317,13 @@ class SlothConfigForm extends FormBase {
   /**
    * Implements a form submit handler.
    *
-   * The submitForm method is the default method called for any submit elements.
-   *
    * @param array $form
    *   The render array of the currently built form.
    * @param FormStateInterface $form_state
    *   Object describing the current state of the form.
    */
   public function submitForm(array &$form, FormStateInterface $form_state) {
-    $config_settings = $this->config_factory->getEditable('sloth.settings');
+    $config_settings = $this->config_factory->getEditable('shard.settings');
     //Save content types.
     $content_types_submitted = $form_state->getValue('content_types');
     $content_types_to_save = [];

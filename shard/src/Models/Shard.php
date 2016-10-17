@@ -9,20 +9,21 @@
 namespace Drupal\sloth\Models;
 
 use Drupal\Core\Entity\EntityTypeManagerInterface;
-use Drupal\sloth\Exceptions\SlothBadDataTypeException;
-use Drupal\sloth\Exceptions\SlothException;
-use Drupal\sloth\Exceptions\SlothMissingDataException;
-use Drupal\sloth\Exceptions\SlothDatatbaseException;
+use Drupal\shard\Exceptions\ShardUnexpectedValueException;
+use Drupal\shard\Exceptions\ShardBadDataTypeException;
+use Drupal\shard\Exceptions\ShardException;
+use Drupal\shard\Exceptions\ShardMissingDataException;
+use Drupal\shard\Exceptions\ShardDatabaseException;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Drupal\Core\Entity\EntityInterface;
 use Drupal\Core\Entity\Query\QueryFactory;
 use Drupal\field_collection\Entity\FieldCollectionItem;
 use Drupal\Core\Entity\EntityDisplayRepositoryInterface;
-use Drupal\sloth\Exceptions\SlothUnexptectedValueException;
-use Drupal\sloth\Exceptions\SlothNotFoundException;
+use Drupal\shard\Exceptions\ShardNotFoundException;
 use Drupal\Core\Render\RendererInterface;
 use Drupal\Core\Database\Connection;
-
+use Drupal\sloth\Services\EligibleFields;
+use Drupal\sloth\SlothReferenceBag;
 
 class Shard {
 
@@ -117,6 +118,14 @@ class Shard {
   protected $viewHtml = null;
 
   /**
+   * Entity query object.
+   *
+   * @var \Drupal\Core\Entity\Query\QueryInterface
+   */
+  protected $entityQuery;
+
+
+  /**
    * SlothTagHandler constructor.
    *
    * Load sloth configuration data set by admin.
@@ -171,11 +180,17 @@ class Shard {
   }
 
   /**
-   * @param int $hostNid
-   * @return Shard
+   * @param int $host_nid
+   * @return \Drupal\sloth\Models\Shard
+   * @throws \Drupal\shard\Exceptions\ShardUnexpectedValueException
    */
-  public function setHostNid($hostNid) {
-    $this->hostNid = $hostNid;
+  public function setHostNid($host_nid) {
+    if ( ! $this->isValidNid($host_nid) ) {
+      throw new ShardUnexpectedValueException(
+        sprintf('Host nid not valid: %s', $host_nid)
+      );
+    }
+    $this->hostNid = $host_nid;
     return $this;
   }
 
@@ -187,14 +202,24 @@ class Shard {
   }
 
   /**
-   * @param int $guestNid
-   * @return Shard
+   * @param int $guest_nid
+   * @return \Drupal\sloth\Models\Shard
+   * @throws \Drupal\shard\Exceptions\ShardUnexpectedValueException
    */
-  public function setGuestNid($guestNid) {
-    $this->hostNid = $guestNid;
+  public function setGuestNid($guest_nid) {
+    if ( ! $this->isValidNid($guest_nid) ) {
+      throw new ShardUnexpectedValueException(
+        sprintf('Guest nid not valid: %s',$guest_nid)
+      );
+    }
+    $this->hostNid = $guest_nid;
     return $this;
   }
 
+  /**
+   * @param $value
+   * @return bool
+   */
   public function isValidNid($value) {
     //Must be a number.
     if ( ! is_numeric($value) ) {
@@ -205,11 +230,21 @@ class Shard {
       return TRUE;
     }
     //Check whether $value is a known nid.
-    if ( Shard::$existingNids == NULL ) {
-      //Load the known nids.
+    $this->loadValidNids();
+    return in_array($value, Shard::$existingNids);
+  }
 
+  /**
+   *
+   */
+  protected function loadValidNids() {
+    if ( is_array(Shard::$existingNids) ) {
+      //Already loaded.
+      return;
     }
-
+    $query = $this->entityQuery->get('node');
+    $result = $query->execute();
+    Shard::$existingNids = array_values($result);
   }
 
   /**
@@ -220,11 +255,11 @@ class Shard {
   }
 
   /**
-   * @param string $fieldName
+   * @param string $field_name
    * @return Shard
    */
-  public function setFieldName($fieldName) {
-    $this->fieldName = $fieldName;
+  public function setFieldName($field_name) {
+    $this->fieldName = $field_name;
     return $this;
   }
 
@@ -253,9 +288,15 @@ class Shard {
 
   /**
    * @param int $location
-   * @return Shard
+   * @return \Drupal\sloth\Models\Shard
+   * @throws \Drupal\shard\Exceptions\ShardUnexpectedValueException
    */
   public function setLocation($location) {
+    if ( ! is_numeric($location) || $location < 0 ) {
+      throw new ShardUnexpectedValueException(
+        sprintf('Location not valid: %s', $location)
+      );
+    }
     $this->location = $location;
     return $this;
   }
@@ -268,11 +309,19 @@ class Shard {
   }
 
   /**
-   * @param string $viewMode
-   * @return Shard
+   * @param string $view_mode
+   * @return $this For chaining.
+   * @throws \Drupal\shard\Exceptions\ShardUnexpectedValueException
    */
-  public function setViewMode($viewMode) {
-    $this->viewMode = $viewMode;
+  public function setViewMode($view_mode) {
+    //Does the view mode exist?
+    $all_view_modes = $this->entityDisplayRepository->getViewModes('node');
+    if ( ! key_exists($view_mode, $all_view_modes) ) {
+      throw new ShardUnexpectedValueException(
+        sprintf('Unknown shard view mode: %s', $view_mode)
+      );
+    }
+    $this->viewMode = $view_mode;
     return $this;
   }
 
@@ -284,11 +333,11 @@ class Shard {
   }
 
   /**
-   * @param mixed $localContent
+   * @param mixed $local_content
    * @return Shard
    */
-  public function setLocalContent($localContent) {
-    $this->localContent = $localContent;
+  public function setLocalContent($local_content) {
+    $this->localContent = $local_content;
     return $this;
   }
 
@@ -300,11 +349,11 @@ class Shard {
   }
 
   /**
-   * @param mixed $ckHtml
+   * @param mixed $ck_tml
    * @return Shard
    */
-  public function setCkHtml($ckHtml) {
-    $this->ckHtml = $ckHtml;
+  public function setCkHtml($ck_tml) {
+    $this->ckHtml = $ck_tml;
     return $this;
   }
 
@@ -316,11 +365,11 @@ class Shard {
   }
 
   /**
-   * @param string $dbHtml
+   * @param string $db_hHtml
    * @return Shard
    */
-  public function setDbHtml($dbHtml) {
-    $this->dbHtml = $dbHtml;
+  public function setDbHtml($db_html) {
+    $this->dbHtml = $db_html;
     return $this;
   }
 }

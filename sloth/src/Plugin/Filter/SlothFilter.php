@@ -43,7 +43,8 @@ class SlothFilter extends FilterBase {
       $container->get('entity_type.manager'),
       $container->get('entity_display.repository'),
       $container->get('entity.query'),
-      $container->get('renderer')
+      $container->get('renderer'),
+      $container->get('database')
     );
     $text = $sloth_tag_handler->dbHtmlToViewHtml($text);
 

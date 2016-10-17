@@ -22,6 +22,7 @@ use Drupal\sloth\Exceptions\SlothUnexptectedValueException;
 use Drupal\sloth\Exceptions\SlothNotFoundException;
 use Drupal\Core\Render\RendererInterface;
 use Drupal\Core\Database\Connection;
+use Drupal\sloth\Services\EligibleFields;
 
 class SlothTagHandler {
 
@@ -447,7 +448,7 @@ class SlothTagHandler {
    *
    * @param \DOMElement $element
    * @return string View mode.
-   * @throws \Drupal\sloth\Exceptions\SlothMissingDataException
+   * @throws \Drupal\shard\Exceptions\ShardMissingDataException
    */
   protected function getViewModeOfElement(\DOMElement $element) {
     $view_mode = $element->getAttribute('data-view-mode');

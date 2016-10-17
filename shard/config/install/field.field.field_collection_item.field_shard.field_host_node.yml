@@ -18,11 +18,11 @@ settings:
   handler: 'default:node'
   handler_settings:
     target_bundles:
-      article: article
-      page: page
-      book: book
-      exercise: exercise
-      sloth: sloth
+#      article: article
+#      page: page
+#      book: book
+#      exercise: exercise
+#      sloth: sloth
     sort:
       field: _none
     auto_create: false
