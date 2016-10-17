@@ -1,0 +1,17 @@
+admin sloth:
+  title: 'Administer sloth settings'
+  description: 'Change the settings of the sloths.'
+  restrict access: true
+
+view sloth shard field:
+  title: 'View sloth shard field'
+  description: 'See the sloth shard field.'
+  restrict access: true
+
+edit sloth shard field manually:
+  title: 'Edit sloth shard field manually'
+  description: 'Edit the shard field on the shard node edit form.'
+  restrict access: true
+
+#permission_callbacks:
+#  - \Drupal\node\NodePermissions::nodeTypePermissions

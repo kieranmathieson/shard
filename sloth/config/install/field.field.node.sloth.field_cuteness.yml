@@ -1,0 +1,22 @@
+langcode: en
+status: true
+dependencies:
+    config:
+        - field.storage.node.field_cuteness
+        - node.type.sloth
+id: node.sloth.field_cuteness
+field_name: field_cuteness
+entity_type: node
+bundle: sloth
+label: Cuteness
+description: 'How cute is the sloth? An integer from 1 (not cute) to 5 (very cute).'
+required: false
+translatable: false
+default_value: {  }
+default_value_callback: ''
+settings:
+    min: 1
+    max: 5
+    prefix: ''
+    suffix: ''
+field_type: integer

@@ -1,0 +1,14 @@
+{
+  "name": "drupal/sloth",
+  "type": "drupal-module",
+  "description": "Testing the shard idea with sloths.",
+  "keywords": ["Drupal"],
+  "license": "GPL-2.0+",
+  "homepage": "https://www.drupal.org/project/sloth",
+  "minimum-stability": "dev",
+  "support": {
+    "issues": "https://www.drupal.org/project/issues/sloth",
+    "source": "http://cgit.drupalcode.org/sloth"
+  },
+  "require": { }
+}

@@ -1,0 +1,4 @@
+services:
+  sloth.eligible_fields:
+    class: Drupal\sloth\EligibleFields
+    arguments: ['@config.factory', '@entity_field.manager']

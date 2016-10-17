@@ -1,0 +1,26 @@
+sloth:
+  version: 1.x
+  css:
+    theme:
+      css/sloth.css: {}
+  js:
+    js/session-token.js: {}
+    #Sloth file
+    #Load sloth.js early, since it defines the namespace for the rest of the code.
+    js/sloth.js: { weight: -2 }
+    #Preview files. Load early-ish, since they are used in sloth models.
+    #(Currently aren't loaded that way, but might be when I figure out how.)
+    js/models/preview-model.js: { weight: -1 }
+    js/collections/preview-collection.js: { weight: -1 }
+    #Sloths
+    js/models/sloth-model.js: {}
+    js/collections/sloth-collection.js: {}
+    #View mode files
+    #They use the sloth namespace, since they are specific to sloth embedding.
+    js/models/view-mode-model.js: {}
+    js/collections/view-mode-collection.js: {}
+  dependencies:
+    - core/drupal
+    - core/jquery
+    - core/backbone
+    - core/drupalSettings

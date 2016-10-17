@@ -1,0 +1,6 @@
+sloth.config:
+  title: 'Configure sloths'
+  description: 'Configure sloth shards.'
+  route_name: sloth.config
+  weight: 50
+  parent: system.admin_config_content

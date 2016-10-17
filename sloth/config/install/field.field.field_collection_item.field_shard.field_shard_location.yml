@@ -1,0 +1,22 @@
+langcode: en
+status: true
+dependencies:
+  config:
+    - field.storage.field_collection_item.field_shard_location
+    - field_collection.field_collection.field_shard
+id: field_collection_item.field_shard.field_shard_location
+field_name: field_shard_location
+entity_type: field_collection_item
+bundle: field_shard
+label: Location
+description: 'Where in the host field is the shard inserted?'
+required: false
+translatable: false
+default_value: {  }
+default_value_callback: ''
+settings:
+  min: 0
+  max: null
+  prefix: ''
+  suffix: ''
+field_type: integer

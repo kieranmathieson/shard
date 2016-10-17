@@ -1,0 +1,10 @@
+name: Sloth
+type: module
+description: Testing the shard idea with sloths.
+core: 8.x
+package: Shards
+dependencies:
+  - field
+  - ckeditor
+  - field_collection
+  - rest

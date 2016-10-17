@@ -1,0 +1,40 @@
+langcode: en
+status: true
+dependencies:
+    config:
+        - core.entity_view_mode.node.shard
+        - field.field.node.sloth.field_cuteness
+        - field.field.node.sloth.field_photo
+        - field.field.node.sloth.field_shard
+        - field.field.node.sloth.field_sloth_notes
+        - node.type.sloth
+    module:
+        - image
+        - user
+_core:
+    default_config_hash: 9TaMoQ0Gm8tW7_Apk07rbI-5U1orMXfPqy2q9xkSN9s
+id: node.sloth.shard
+targetEntityType: node
+bundle: sloth
+mode: shard
+content:
+    field_cuteness:
+        weight: 1
+        label: above
+        settings:
+            thousand_separator: ''
+            prefix_suffix: true
+        third_party_settings: {  }
+        type: number_integer
+    field_photo:
+        weight: 0
+        label: above
+        settings:
+            image_style: ''
+            image_link: ''
+        third_party_settings: {  }
+        type: image
+hidden:
+    field_shard: true
+    field_sloth_notes: true
+    links: true

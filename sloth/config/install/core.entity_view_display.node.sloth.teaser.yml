@@ -1,0 +1,35 @@
+langcode: en
+status: true
+dependencies:
+    config:
+        - core.entity_view_mode.node.teaser
+        - field.field.node.sloth.field_cuteness
+        - field.field.node.sloth.field_photo
+        - field.field.node.sloth.field_shard
+        - field.field.node.sloth.field_sloth_notes
+        - node.type.sloth
+    module:
+        - user
+_core:
+    default_config_hash: 6umSxGjzeoKMyaN9mFBbIJ5hmA-RDqpRs76NDanqkjg
+id: node.sloth.teaser
+targetEntityType: node
+bundle: sloth
+mode: teaser
+content:
+    field_cuteness:
+        type: number_integer
+        weight: 0
+        label: inline
+        settings:
+            thousand_separator: ''
+            prefix_suffix: true
+        third_party_settings: {  }
+    links:
+        weight: 100
+        settings: {  }
+        third_party_settings: {  }
+hidden:
+    field_photo: true
+    field_shard: true
+    field_sloth_notes: true

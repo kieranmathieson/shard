@@ -1,0 +1,30 @@
+langcode: en
+status: true
+dependencies:
+  config:
+    - field.storage.field_collection_item.field_host_node
+    - field_collection.field_collection.field_shard
+id: field_collection_item.field_shard.field_host_node
+field_name: field_host_node
+entity_type: field_collection_item
+bundle: field_shard
+label: 'Host node'
+description: 'Where the shard is embedded.'
+required: false
+translatable: false
+default_value: {  }
+default_value_callback: ''
+settings:
+  handler: 'default:node'
+  handler_settings:
+    target_bundles:
+      article: article
+      page: page
+      book: book
+      exercise: exercise
+      sloth: sloth
+    sort:
+      field: _none
+    auto_create: false
+    auto_create_bundle: article
+field_type: entity_reference

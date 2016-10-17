@@ -1,0 +1,20 @@
+langcode: en
+status: true
+dependencies:
+    config:
+        - field.storage.node.field_sloth_notes
+        - node.type.sloth
+    module:
+        - text
+id: node.sloth.field_sloth_notes
+field_name: field_sloth_notes
+entity_type: node
+bundle: sloth
+label: Notes
+description: 'Notes about this sloth.'
+required: false
+translatable: false
+default_value: {  }
+default_value_callback: ''
+settings: {  }
+field_type: text_long

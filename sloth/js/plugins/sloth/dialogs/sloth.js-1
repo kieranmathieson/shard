@@ -1,0 +1,288 @@
+/**
+ * @file
+ * The sloth dialog definition.
+ *
+ */
+(function ($) {
+
+  "use strict";
+  /**
+   * @todo: Localize titles and labels.
+   *
+   * @todo: Create styles from CSS file names.
+   */
+  Drupal.SlothSpace.loadingIndicator = Drupal.t('Loading...');
+  //Flag to show setting up.
+  Drupal.SlothSpace.uiReady = false;
+  Drupal.SlothSpace.views.preview = new Drupal.SlothSpace.views.SlothPreview();
+  CKEDITOR.dialog.add('sloth', function (editor) {
+    // var lang = editor.lang.admonition;
+    return {
+
+      // Basic properties of the dialog window: title, minimum size.
+      title: "Sloth", //lang.dialogTitle,
+      minWidth: 200,
+      maxWidth: 480,
+      minHeight: 200,
+      maxHeight: 400,
+      slothList: [], // new Array(),
+      // Dialog window contents definition.
+      contents: [
+        {
+          // Definition of the dialog tab.
+          //@todo Need to define when have one tab?
+          //@todo Change the alert() error call to something fancier?
+          id: 'tab-basic',
+          label: 'Basic Settings',
+
+          // The tab contents.
+          elements: [
+            {
+              //Explain what a sloth is.
+              type: 'html',
+              html: 'A sloth is MORE.'
+            },
+            { //Sloth select element.
+              type: 'select',
+              id: 'slothSelect',
+              label: 'Choose a sloth',
+              items: Drupal.SlothSpace.slothOptions,
+              default: Drupal.SlothSpace.slothOptions[0][1],
+              setup: function( widget ) {
+                if ( widget.data.slothId ){
+                  console.log('Sloth field setup for: ' + widget.data.slothId);
+                  this.setValue(widget.data.slothId);
+                }
+              },
+              onChange: function(evnt) {
+                // if ( ! Drupal.SlothSpace.uiReady ) {
+                //   console.log('Sloth on change: ui not ready. Leaving.');
+                //   return;
+                // }
+                console.log('Start sloth onchange. getValue:' + this.getValue());
+                //Get the selected nid.
+                var selectedNid = this.getValue();
+                // if ( ! selectedNid ) {
+                //   //No preview to show.
+                //   console.log('Leaving for ! selectnid');
+                //   return;
+                // }
+                var sloths = Drupal.SlothSpace.collections.pack;
+                var selectedModel = sloths.get(selectedNid);
+                $.when( this.loadPreview(selectedModel, Drupal.SlothSpace.currentViewMode) )
+                  .then(function(){
+                    // if ( ! selectedModel ) {
+                    //   return;
+                    // }
+                    console.log('Showing preview for nid: ' + selectedModel.get('nid'));
+                    Drupal.SlothSpace.views.preview.model = selectedModel;
+                    Drupal.SlothSpace.views.preview.render(Drupal.SlothSpace.currentViewMode);
+                    // var preview = selectedModel.getPreview(Drupal.SlothSpace.currentViewMode);
+                    // console.log(preview);
+                    //$('#sloth-preview').html(preview).show();
+                  });
+              },
+              commit: function( widget ) {
+                widget.setData( 'slothId', this.getValue() );
+              },
+              loadPreview: function(selectedModel, viewMode) {
+                console.log('Start sloth load preview');
+                if ( ! selectedModel ) {
+                  console.log('Nothing selected. Leave.');
+                  return;
+                }
+                console.log('Loading preview. nid: '
+                  + selectedModel.get('nid') + ' view mode' + viewMode );
+                //Already got the preview?
+                if ( selectedModel.isPreviewSet(viewMode) ) {
+                  console.log('Load preview: already got it.');
+                  return;
+                }
+                console.log('dinna have preview');
+                var deferred = $.Deferred();
+                Drupal.SlothSpace.views.preview.showLoading();
+                $.when( selectedModel.fetch(viewMode) )
+                  .then(function(){
+                    console.log('Got preview.');
+                    deferred.resolve();
+                  });
+                return deferred.promise();
+              }
+            }, //End sloth select widget
+            { //Sloth view mode element.
+              type: 'select',
+              id: 'viewModeSelect',
+              label: 'Choose a view mode',
+              items: Drupal.SlothSpace.viewModeOptions,
+              default: Drupal.SlothSpace.viewModeOptions[0][1],
+              setup: function( widget ) {
+                if ( widget.data.viewMode ) {
+                  console.log('View mode field setup for: ' + widget.data.viewMode);
+                  this.setValue(widget.data.viewMode);
+                }
+              },
+              onChange: function(evnt) {
+                console.log('Start view mode onchange');
+                // if ( ! Drupal.SlothSpace.uiReady ) {
+                //   console.log('onchange viewmode: ui not ready. Leaving.');
+                //   return;
+                // }
+                if ( ! $('#' + this.domId).is(":visible") || Drupal.SlothSpace.collections.viewModes.length == 1 ) {
+                  console.log('Only one. Leaving.');
+                  return;
+                }
+                //Get the selected nid.
+                console.log('getValue:' + this.getValue());
+                var selectedMode = this.getValue();
+                // if ( ! selectedMode ) {
+                //   //Nothing to show.
+                //   console.log('Leaving for ! select view mode');
+                //   return;
+                // }
+                Drupal.SlothSpace.currentViewMode = selectedMode;
+                // console.log(this);
+                // window.changeThing = this;
+                //Trigger the sloth select to change, to redo preview.
+                var slothSelect = this.getDialog().getContentElement('tab-basic', 'slothSelect');
+                var selectedSloth = slothSelect.getValue();
+                console.log('Selected sloth:' + selectedSloth);
+                console.log('triggering sloth select');
+                slothSelect.setValue(selectedSloth);
+              },
+              commit: function( widget ) {
+                widget.setData( 'viewMode', this.getValue() );
+              },
+              loadPreview: function(selectedModel, viewMode) {
+                console.log('start View mode load preview');
+                if ( ! selectedModel ) {
+                  console.log('Nothing selected. Leave.');
+                  return;
+                }
+                console.log('Loading preview. nid: '
+                  + selectedModel.get('nid') + ' view mode' + viewMode );
+                //Already got the preview?
+                if ( selectedModel.isPreviewSet(viewMode) ) {
+                  console.log('Load preview: already got it.');
+                  return;
+                }
+                console.log('dinna have preview');
+                var deferred = $.Deferred();
+                Drupal.SlothSpace.views.preview.showLoading();
+                $.when( selectedModel.fetch(viewMode) )
+                  .then(function(){
+                    console.log('Got preview.');
+                    deferred.resolve();
+                  });
+                return deferred.promise();
+              }
+            }, //End sloth select widget
+            {
+              //Preview of selected sloth.
+              type: 'html',
+              id: 'preview',
+              label: 'Preview',
+              html:
+                '<div id="sloth-preview-wrapper">'
+              +   '<p id="sloth-preview-label">Preview</p>'
+              +   '<div id="sloth-preview">'
+              +      Drupal.SlothSpace.loadingIndicator
+              +   '</div>'
+              + '</div>'
+            }
+          ] //End elements
+        }
+      ],
+      // onShow: function() {
+      //   console.log('Starting onshow');
+      //   if (Drupal.SlothSpace.collections.pack.models.length == 0) {
+          //Data not loaded from server. Do it, then set up the UI once the
+          //data has been received.
+          // window.thing = this;
+          //Convenience var for keeping a reference to current value of this.
+          // var thisyThis = this;
+          // Drupal.SlothSpace.views.preview = new Drupal.SlothSpace.views.SlothPreview();
+          // console.log('Load all the things.');
+          // $('#sloth-preview').hide();
+          //Load view modes and sloths.
+          // $.when(
+          //   Drupal.SlothSpace.collections.viewModes.fetch(),
+          //   Drupal.SlothSpace.collections.pack.fetch()
+          //   )
+          //   .then(function () {
+          //     //Add MT previews to the sloths.
+          //     //Should be a cleaner way to do this.
+          //     $.each(Drupal.SlothSpace.collections.pack.models, function(index, sloth) {
+          //       sloth.set('previews', new Drupal.SlothSpace.collections.Album());
+          //     });
+          //     thisyThis.definition.setupUi();
+          //   });
+      //   }
+      //   else {
+      //     console.log('models already loaded.');
+      //     //Data already loaded from server.
+      //     this.definition.setupUi();
+      //   }
+      // },
+      onShow: function() {
+        console.log('start on show');
+        this.setupViewModeSelect();
+        this.setupSlothSelect();
+        Drupal.SlothSpace.uiReady = true;
+        //Show the initial preview.
+        //Trigger the sloth select to change, to redo preview.
+        console.log('setupUI: getting ready to trigger sloth select.');
+        var slothSelect = this.dialog.getContentElement('tab-basic', 'slothSelect');
+        var selectedSloth = slothSelect.getValue();
+        console.log('Selected sloth:' + selectedSloth);
+        console.log('triggering sloth select');
+        slothSelect.setValue(selectedSloth);
+
+      },
+      setupViewModeSelect: function(){
+        console.log('start setupViewModeSelect');
+        //Setup the view modes.
+        console.log('Init view modes. Length: ' + Drupal.SlothSpace.collections.viewModes.length);
+        var viewModeWidget = this.dialog.getContentElement('tab-basic', 'viewModeSelect');
+        if ( Drupal.SlothSpace.collections.viewModes.length == 1 ) {
+          //There's just one available, so it is the Chosen One.
+          console.log('Just one view mode exists');
+          Drupal.SlothSpace.currentViewMode
+            = Drupal.SlothSpace.collections.viewModes.models[0].get('machineName');
+          $('#' + viewModeWidget.domId).hide();
+        }
+        else {
+          Drupal.SlothSpace.currentViewMode = viewModeWidget.getValue();
+        //   console.log('more than one view mode');
+        //   viewModeWidget.clear();
+        //   $.each( Drupal.SlothSpace.collections.viewModes.models, function(index, viewMode){
+        //     viewModeWidget.add( viewMode.get('label'), viewMode.get('machineName') );
+        //   });
+        //   //Select the first item in the collection.
+        //   var firstElementMachineName
+        //     = Drupal.SlothSpace.collections.viewModes.models[0].get('machineName');
+        //   console.log('First one: ' + firstElementMachineName);
+        //   viewModeWidget.setValue( firstElementMachineName );
+        //   Drupal.SlothSpace.currentViewMode = firstElementMachineName;
+        }
+      },
+      setupSlothSelect: function(){
+        // console.log('start setupSlothSelect');
+        // //Add the collection's items to the select list.
+        // var selectWidget = this.dialog.getContentElement('tab-basic', 'slothSelect');
+        // selectWidget.clear();
+        // $.each( Drupal.SlothSpace.collections.pack.models, function(index, sloth){
+        //   selectWidget.add( sloth.get('title'), sloth.get('nid') );
+        // });
+        // //Select the first item in the collection.
+        // var firstElementNid = Drupal.SlothSpace.collections.pack.models[0].get('nid');
+        // console.log('First sloth: ' + firstElementNid);
+        // selectWidget.setValue( firstElementNid );
+      },
+      onOk: function(){
+        //Stash the current preview for the caller to grab.
+        Drupal.SlothSpace.currentPreview = $('#sloth-preview').html();
+      }
+    };
+  });
+
+})(jQuery);

@@ -1,0 +1,28 @@
+sloth.settings:
+  type: mapping
+  label: 'Sloth config'
+  mapping:
+    content_types:
+      type: sequence
+      label: 'Content types that can have sloths embedded.'
+      sequence:
+        type: string
+        label: 'Content type'
+    fields:
+      type: sequence
+      label: 'Fields that can have shards.'
+      sequence:
+        type: string
+        label: 'Field name'
+    view_modes:
+      type: sequence
+      label: 'View modes that can be embedded.'
+      sequence:
+        type: string
+        label: 'View modes'
+    field_types:
+      type: sequence
+      label: 'Field types that sloths can be embedded in.'
+      sequence:
+        type: string
+        label: 'View modes'

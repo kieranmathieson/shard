@@ -1,0 +1,10 @@
+name: Shard
+type: module
+description: A shard is a view of one node inserted into another.
+core: 8.x
+package: Shards
+dependencies:
+  - field
+  - ckeditor
+  - field_collection
+  - rest

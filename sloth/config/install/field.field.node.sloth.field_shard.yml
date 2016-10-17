@@ -1,0 +1,22 @@
+langcode: en
+status: true
+dependencies:
+    config:
+        - field.storage.node.field_shard
+        - node.type.sloth
+    module:
+        - field_collection
+id: node.sloth.field_shard
+field_name: field_shard
+entity_type: node
+bundle: sloth
+label: Shard
+description: 'Where sloth data is embedded in other nodes.'
+required: false
+translatable: false
+default_value:
+    - {  }
+    - {  }
+default_value_callback: ''
+settings: {  }
+field_type: field_collection
