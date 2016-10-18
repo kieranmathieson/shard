@@ -25,47 +25,29 @@ use Drupal\Core\Database\Connection;
 use Drupal\sloth\Services\EligibleFields;
 use Drupal\sloth\SlothReferenceBag;
 
-class Shard {
+class Shard extends ModelBase {
 
-  /**
-   * Placeholder value showing that a nid is unknown.
-   *
-   * Null won't work as well, since many functions use null as a no-result
-   * indicator. Using a specific value distinguishes between those fallback
-   * cases, and the situation where we deliberately say that the nid is
-   * unknown.
-   *
-   * @var int
-   */
-  const UNKNOWN = -666;
 
   /**
    * The nid of the node where the shard is being inserted. Null when not known.
    *
    * @var integer
    */
-  protected $hostNid = Shard::UNKNOWN;
+  protected $hostNid = self::UNKNOWN;
 
   /**
    * The nid of the node being inserted. Null when not known.
    *
    * @var integer
    */
-  protected $guestNid = Shard::UNKNOWN;
-
-  /**
-   * Values that are known to be valid nids.
-   *
-   * @var int[]
-   */
-  static protected $existingNids = null;
+  protected $guestNid = self::UNKNOWN;
 
   /**
    * The name of the field the guest is inserted into.
    *
    * @var string
    */
-  protected $fieldName = null;
+  protected $guestFieldName = null;
 
   /**
    * Which value of the field has the guest inserted.
@@ -73,14 +55,14 @@ class Shard {
    *
    * @var integer
    */
-  protected $delta = null;
+  protected $guestFieldDelta = null;
 
   /**
    * The approximate location of the guest tag in the host field's content.
    *
    * @var integer
    */
-  protected $location = null;
+  protected $locationInField = null;
 
   /**
    * Which view mode is used to display the guest.
@@ -95,27 +77,6 @@ class Shard {
    * @var string
    */
   protected $localContent = null;
-
-  /**
-   * Shard HTML, with shard tags in CKEditor format.
-   *
-   * @var string
-   */
-  protected $ckHtml = null;
-
-  /**
-   * Shard HTML, with shard tags in DB format.
-   *
-   * @var string
-   */
-  protected $dbHtml = null;
-
-  /**
-   * Shard HTML, with shard tags in view format.
-   *
-   * @var string
-   */
-  protected $viewHtml = null;
 
   /**
    * Entity query object.
@@ -138,7 +99,6 @@ class Shard {
    */
   public function __construct(
     EntityTypeManagerInterface $entity_type_manager,
-    EntityDisplayRepositoryInterface $entity_display_repository,
     QueryFactory $entity_query,
     RendererInterface $renderer,
     Connection $database_connection) {
@@ -147,7 +107,6 @@ class Shard {
       \Drupal::service('entity_field.manager')
     );
     $this->entityTypeManager = $entity_type_manager;
-    $this->entityDisplayRepository = $entity_display_repository;
     $this->entityQuery = $entity_query;
     $this->renderer = $renderer;
     $this->databaseConnection = $database_connection;
@@ -164,7 +123,6 @@ class Shard {
     return new static(
 //      $container->get('sloth.eligible_fields'),
       $container->get('entity_type.manager'),
-      $container->get('entity_display.repository'),
       $container->get('entity.query'),
       $container->get('renderer'),
       $container->get('database')
@@ -217,87 +175,56 @@ class Shard {
   }
 
   /**
-   * @param $value
-   * @return bool
-   */
-  public function isValidNid($value) {
-    //Must be a number.
-    if ( ! is_numeric($value) ) {
-      return FALSE;
-    }
-    //Can be unknown.
-    if ( $value == Shard::UNKNOWN ) {
-      return TRUE;
-    }
-    //Check whether $value is a known nid.
-    $this->loadValidNids();
-    return in_array($value, Shard::$existingNids);
-  }
-
-  /**
-   *
-   */
-  protected function loadValidNids() {
-    if ( is_array(Shard::$existingNids) ) {
-      //Already loaded.
-      return;
-    }
-    $query = $this->entityQuery->get('node');
-    $result = $query->execute();
-    Shard::$existingNids = array_values($result);
-  }
-
-  /**
    * @return string
    */
-  public function getFieldName() {
-    return $this->fieldName;
+  public function getGuestFieldName() {
+    return $this->guestFieldName;
   }
 
   /**
    * @param string $field_name
    * @return Shard
    */
-  public function setFieldName($field_name) {
-    $this->fieldName = $field_name;
+  public function setGuestFieldName($field_name) {
+    $this->guestFieldName = $field_name;
     return $this;
   }
 
   /**
    * @return int
    */
-  public function getDelta() {
-    return $this->delta;
+  public function getGuestFieldDelta() {
+    return $this->guestFieldDelta;
   }
 
   /**
-   * @param int $delta
+   * @param int $guestFieldDelta
    * @return Shard
    */
-  public function setDelta($delta) {
-    $this->delta = $delta;
+  public function setGuestFieldDelta($guestFieldDelta) {
+    $this->guestFieldDelta = $guestFieldDelta;
     return $this;
   }
 
   /**
    * @return int
    */
-  public function getLocation() {
-    return $this->location;
+  public function getLocationInField() {
+    return $this->locationInField;
   }
 
   /**
-   * @param int $location
+   * @param int $locationInField
    * @return \Drupal\sloth\Models\Shard
    * @throws \Drupal\shard\Exceptions\ShardUnexpectedValueException
    */
-  public function setLocation($location) {
-    if ( ! is_numeric($location) || $location < 0 ) {
+  public function setLocationInField($locationInField) {
+    if ( ! is_numeric($locationInField) || $locationInField < 0 ) {
       throw new ShardUnexpectedValueException(
-        sprintf('Location not valid: %s', $location)
+        sprintf('Location not valid: %s', $locationInField)
       );
     }
-    $this->location = $location;
+    $this->locationInField = $locationInField;
     return $this;
   }
 
@@ -315,8 +242,7 @@ class Shard {
    */
   public function setViewMode($view_mode) {
     //Does the view mode exist?
-    $all_view_modes = $this->entityDisplayRepository->getViewModes('node');
-    if ( ! key_exists($view_mode, $all_view_modes) ) {
+    if ( ! $this->isValidViewMode($view_mode) ) {
       throw new ShardUnexpectedValueException(
         sprintf('Unknown shard view mode: %s', $view_mode)
       );
