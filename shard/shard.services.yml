@@ -1,0 +1,4 @@
+services:
+  shard.node_metadata:
+    class: Drupal\shard\NodeMetaData
+#    arguments: ['@config.factory', '@entity_field.manager']

@@ -1,26 +1,53 @@
 <?php
 /**
- * Created by PhpStorm.
- * User: kieran
- * Date: 10/17/16
- * Time: 1:47 PM
+ * @file
+ * Represents a node, either a host node, or a guest node.
  */
 
-namespace Drupal\sloth\Models;
+namespace Drupal\shard\Models;
 
-use Drupal\shard\Exceptions\ShardMissingDataException;
 use Drupal\shard\Exceptions\ShardUnexpectedValueException;
+use Symfony\Component\DependencyInjection\ContainerInterface;
 
 
-class Node extends ModelBase {
 
-  protected $nid = self::UNKNOWN;
+class Node {
 
+  /**
+   * This node's id.
+   *
+   * @var int
+   */
+  protected $nid;
+
+  /**
+   * Name of this node's content type.
+   * @var string
+   */
   protected $contentType = NULL;
 
-  protected $validGuestFields = [];
+  /**
+   * Service supplying metadata about nodes and fields.
+   *
+   * @var \Drupal\shard\Models\NodeFieldMetadataInterface
+   */
+  protected $nodeMetadata;
 
-  protected $guestShards = [];
+  public function __construct(NodeMetadataInterface $node_meta_data) {
+    $this->nodeMetadata = $node_meta_data;
+    $this->nid = NodeMetaData::UNKNOWN;
+  }
+
+  /**
+   * @param \Symfony\Component\DependencyInjection\ContainerInterface $container
+   * @return static
+   */
+  public static function create(ContainerInterface $container) {
+    return new static(
+      $container->get('shard.node_metadata')
+    );
+  }
+
 
   /**
    * @return int
@@ -35,7 +62,7 @@ class Node extends ModelBase {
    * @throws \Drupal\shard\Exceptions\ShardUnexpectedValueException
    */
   public function setNid($nid) {
-    if ( ! $this->isValidNid($nid) ) {
+    if ( ! $this->nodeMetadata->isValidNid($nid) ) {
       throw new ShardUnexpectedValueException(
         sprintf('Nid not valid: %s', $nid)
       );
@@ -57,46 +84,12 @@ class Node extends ModelBase {
    * @throws \Drupal\shard\Exceptions\ShardUnexpectedValueException
    */
   public function setContentType($content_type) {
-    if ( ! $this->isValidContentType($content_type) ) {
+    if ( ! $this->nodeMetadata->isValidContentType($content_type) ) {
       throw new ShardUnexpectedValueException(
         sprintf('Content type not valid: %s', $content_type)
       );
     }
     $this->contentType = $content_type;
-    return $this;
-  }
-
-  public function addShard(Shard $shard) {
-    if ( $shard->getHostNid() != $this->getNid() ) {
-      throw new ShardUnexpectedValueException(
-        sprintf(
-          'Shard host nid of %u does not match node nid of %u.',
-          $shard->getHostNid(),
-          $this->getNid()
-        )
-      );
-    }
-    if ( ! in_array($shard->getGuestFieldName(), $this->validGuestFields) ) {
-      throw new ShardUnexpectedValueException(
-        sprintf('Unknown guest field name: %s', $shard->getGuestFieldName())
-      );
-    }
-    if ( ! $this->isValidViewMode($shard->getViewMode()) ) {
-      throw new ShardUnexpectedValueException(
-        sprintf('Unknown view mode: %s', $shard->getViewMode())
-      );
-    }
-    $this->guestShards[] = $shard;
-    return $this;
-  }
-
-  public function addValidGuestField($field_name) {
-    if ( ! $field_name ) {
-      throw new ShardMissingDataException(
-        sprintf('Missing field name')
-      );
-    }
-    $this->validGuestFields[] = $field_name;
     return $this;
   }
 

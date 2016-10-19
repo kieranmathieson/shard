@@ -1,7 +1,8 @@
 <?php
 /**
  * @file
- * Models a single shard.
+ * Models a field collection item representing a single shard being used
+ * in a host node.
  *
  * @author Kieran Mathieson
  */
@@ -25,7 +26,7 @@ use Drupal\Core\Database\Connection;
 use Drupal\sloth\Services\EligibleFields;
 use Drupal\sloth\SlothReferenceBag;
 
-class Shard extends ModelBase {
+class ShardFieldCollectionItem {
 
 
   /**
