@@ -8,11 +8,11 @@
  * @author Kieran Mathieson
  */
 
-namespace Drupal\shard\Models;
+namespace Drupal\shard;
 
 use Drupal\Core\Entity\EntityInterface;
 
-interface NodeMetadataInterface {
+interface ShardMetadataInterface {
 
   /**
    * Placeholder value showing that a nid is unknown.

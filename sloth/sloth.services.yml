@@ -1,0 +1,5 @@
+services:
+  sloths.shard_plugin_register:
+    class: Drupal\sloth\SlothSubscriber
+    tags:
+      - { name: event_subscriber }

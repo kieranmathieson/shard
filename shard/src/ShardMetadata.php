@@ -6,7 +6,7 @@
  * @author Kieran Mathieson
  */
 
-namespace Drupal\shard\Models;
+namespace Drupal\shard;
 
 use Drupal\Core\Entity\EntityDisplayRepositoryInterface;
 use Drupal\Core\Entity\Query\QueryFactory;
@@ -18,7 +18,7 @@ use Drupal\Core\Entity\EntityFieldManagerInterface;
 
 use Drupal\shard\Exceptions\ShardMissingDataException;
 
-class NodeMetaData implements NodeMetadataInterface {
+class ShardMetaData implements ShardMetadataInterface {
 
   /**
    * Values that are known to be valid nids.

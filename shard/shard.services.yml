@@ -1,4 +1,12 @@
 services:
-  shard.node_metadata:
-    class: Drupal\shard\NodeMetaData
-#    arguments: ['@config.factory', '@entity_field.manager']
+  #Register Symfony's event dispatcher. Easier to use it with objects that
+  #want to watch for events, than to use Drupal's container-aware plugin,
+  #that works better with classes that need to be instantiated automatically.
+  shard.event_dispatcher:
+    class: Symfony\Component\EventDispatcher\EventDispatcher
+  shard.register_plugins:
+    class: Drupal\shard\ShardRegister
+    arguments: ['@event_dispatcher']
+  shard.metadata:
+    class: Drupal\shard\ShardMetaData
+    arguments: ['@entity_display.repository', '@entity.query', '@entity_type.bundle.info', '@config.factory', '@entity_field.manager']

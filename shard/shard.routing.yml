@@ -1,0 +1,8 @@
+
+shard.default_controller_listPlugins:
+  path: '/shard/list-plugins'
+  defaults:
+    _controller: '\Drupal\shard\Controller\DefaultController::listPlugins'
+    _title: 'Plugins'
+  requirements:
+    _permission: 'access content'
