@@ -176,18 +176,18 @@ class ShardDomProcessor {
       //Is it an element?
       if (get_class($element) == 'DOMElement') {
         //Is it a shard tag?
-        if ($element->hasAttribute(ShardMetaData::SHARD_TYPE_TAG)) {
+        if ($element->hasAttribute(ShardMetadata::SHARD_TYPE_TAG)) {
           //Is it a known tag?
-          $shardTypeName = strtolower($element->getAttribute(ShardMetaData::SHARD_TYPE_TAG));
+          $shardTypeName = strtolower($element->getAttribute(ShardMetadata::SHARD_TYPE_TAG));
           if ( in_array($shardTypeName, $this->metadata->getShardTypeNames() ) ) {
             //Is it unprocessed?
             $processed
               =    $element->hasAttribute(
-                     ShardMetaData::SHARD_TAG_BEEN_PROCESSED_ATTRIBUTE
+                     ShardMetadata::SHARD_TAG_BEEN_PROCESSED_ATTRIBUTE
                    )
                 && $element->getAttribute(
-                     ShardMetaData::SHARD_TAG_BEEN_PROCESSED_ATTRIBUTE
-                   ) == ShardMetaData::SHARD_TAG_HAS_BEEN_PROCESSED_VALUE;
+                     ShardMetadata::SHARD_TAG_BEEN_PROCESSED_ATTRIBUTE
+                   ) == ShardMetadata::SHARD_TAG_HAS_BEEN_PROCESSED_VALUE;
             if (! $processed ) {
               //Yes - return the element.
               return $element;
@@ -223,7 +223,7 @@ class ShardDomProcessor {
    * @return bool
    */
   public function isShardElement(\DOMElement $element) {
-    return $element->hasAttribute(ShardMetaData::SHARD_TYPE_TAG);
+    return $element->hasAttribute(ShardMetadata::SHARD_TYPE_TAG);
   }
 
   /**
@@ -244,11 +244,11 @@ class ShardDomProcessor {
     //Is it unprocessed?
     $processed
       =    $element->hasAttribute(
-             ShardMetaData::SHARD_TAG_BEEN_PROCESSED_ATTRIBUTE
+             ShardMetadata::SHARD_TAG_BEEN_PROCESSED_ATTRIBUTE
            )
         && $element->getAttribute(
-             ShardMetaData::SHARD_TAG_BEEN_PROCESSED_ATTRIBUTE
-           ) == ShardMetaData::SHARD_TAG_HAS_BEEN_PROCESSED_VALUE;
+             ShardMetadata::SHARD_TAG_BEEN_PROCESSED_ATTRIBUTE
+           ) == ShardMetadata::SHARD_TAG_HAS_BEEN_PROCESSED_VALUE;
     return $processed;
   }
 
@@ -261,8 +261,8 @@ class ShardDomProcessor {
       );
     }
     $element->setAttribute(
-      ShardMetaData::SHARD_TAG_BEEN_PROCESSED_ATTRIBUTE,
-      ShardMetaData::SHARD_TAG_HAS_BEEN_PROCESSED_VALUE
+      ShardMetadata::SHARD_TAG_BEEN_PROCESSED_ATTRIBUTE,
+      ShardMetadata::SHARD_TAG_HAS_BEEN_PROCESSED_VALUE
     );
   }
   /**
@@ -280,7 +280,7 @@ class ShardDomProcessor {
       );
     }
     //Is it a known tpe?
-    $shardTypeName = strtolower($element->getAttribute(ShardMetaData::SHARD_TYPE_TAG));
+    $shardTypeName = strtolower($element->getAttribute(ShardMetadata::SHARD_TYPE_TAG));
     return in_array($shardTypeName, $this->metadata->getShardTypeNames());
   }
 

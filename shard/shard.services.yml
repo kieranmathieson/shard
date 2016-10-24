@@ -4,13 +4,14 @@ services:
   #that works better with classes that need to be instantiated automatically.
   shard.event_dispatcher:
     class: Symfony\Component\EventDispatcher\EventDispatcher
-  shard.register_plugins:
-    class: Drupal\shard\ShardRegister
-    arguments: ['@event_dispatcher']
   shard.metadata:
-    class: Drupal\shard\ShardMetaData
+    class: Drupal\shard\ShardMetadata
     arguments: ['@entity_display.repository', '@entity.query', '@entity_type.bundle.info', '@config.factory', '@entity_field.manager', '@event_dispatcher']
   shard.dom_processor:
     class: Drupal\shard\ShardDomProcessor
+    arguments: ['@shard.metadata']
   shard.utilities:
     class: Drupal\shard\ShardUtilities
+  shard.tag_handler:
+    class: Drupal\shard\ShardTagHandler
+    arguments: ['@shard.metadata', '@shard.dom_processor', '@entity_type.manager', '@entity_display.repository', '@entity.query', '@renderer', '@database', '@event_dispatcher']

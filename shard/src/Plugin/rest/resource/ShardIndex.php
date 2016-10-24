@@ -12,17 +12,17 @@ use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Entity\Query\QueryFactory;
 
 /**
- * Provides a REST resource to get a list of sloths.
+ * Provides a REST resource to get a list of shards.
  *
  * @RestResource(
- *   id = "sloth_index",
- *   label = @Translation("Get sloth index"),
+ *   id = "shard_index",
+ *   label = @Translation("Get shard index"),
  *   uri_paths = {
- *     "canonical" = "/sloth/index"
+ *     "canonical" = "/shard/index"
  *   }
  * )
  */
-class SlothIndex extends ResourceBase {
+class ShardIndex extends ResourceBase {
 
   /**
    * A current user instance.
@@ -52,9 +52,10 @@ class SlothIndex extends ResourceBase {
    *   A logger instance.
    * @param \Drupal\Core\Session\AccountProxyInterface $current_user
    *   A current user instance.
+   * @param \Drupal\Core\Entity\EntityTypeManagerInterface $type_manager
+   * @param \Drupal\Core\Entity\Query\QueryFactory $entity_query
    */
   public function __construct(
-    $container,
     array $configuration,
     $plugin_id,
     $plugin_definition,
@@ -66,7 +67,6 @@ class SlothIndex extends ResourceBase {
 ) {
     parent::__construct($configuration, $plugin_id, $plugin_definition,
       $serializer_formats, $logger);
-    $this->container = $container;
     $this->currentUser = $current_user;
     $this->entityTypeManager = $type_manager;
     $this->entityQuery = $entity_query;
@@ -79,7 +79,6 @@ class SlothIndex extends ResourceBase {
   public static function create(ContainerInterface $container,
            array $configuration, $plugin_id, $plugin_definition) {
     return new static(
-      $container,
       $configuration,
       $plugin_id,
       $plugin_definition,
@@ -129,24 +128,24 @@ class SlothIndex extends ResourceBase {
 //    return new ResourceResponse($dog);
 //  }
 
-  public function get() {
+  public function get($shardTypeName) {
     if (!$this->currentUser->hasPermission('access content')) {
       throw new AccessDeniedHttpException();
     }
     $query = $this->entityQuery->get('node')
-      ->condition('type', 'sloth')
+      ->condition('type', $shardTypeName)
       ->condition('status', 1)
       ->sort('title');
     $result = $query->execute();
     $nodes = $this->nodeStorage->loadMultiple($result);
-    $sloths = [];
+    $shards = [];
     foreach ($nodes as $node) {
-      $sloths[] = [
+      $shards[] = [
         'nid' => $node->nid->value,
         'title' => $node->title->value,
         'previews' => [],
       ];
     }
-    return new ResourceResponse($sloths);
+    return new ResourceResponse($shards);
   }
 }

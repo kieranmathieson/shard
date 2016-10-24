@@ -77,10 +77,10 @@ class ShardTagModel {
     $divs = $this->domElement->getElementsByTagName('div');
     while (TRUE) {
       $firstChildShardTagElement = ShardTagModel::$domProcessor->findFirstElementWithAttribute(
-        $divs, ShardMetaData::SHARD_TYPE_TAG, '*');
+        $divs, ShardMetadata::SHARD_TYPE_TAG, '*');
     }
     $firstChildShardTagElement = ShardTagModel::$domProcessor->findFirstElementWithAttribute(
-      $divs, ShardMetaData::SHARD_TYPE_TAG, '*');
+      $divs, ShardMetadata::SHARD_TYPE_TAG, '*');
     if ( $firstChildShardTagElement ) {
       $child = new ShardTagModel($firstChildShardTagElement);
 //      ShardTagModel::$tagCount++;

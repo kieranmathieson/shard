@@ -401,7 +401,7 @@ class Shard {
     //Load the definition of the shard.
     /* @var \Drupal\field_collection\Entity\FieldCollectionItem $fieldCollectionEntity */
     $fieldCollectionEntity = $this->entityTypeManager
-      ->getStorage(ShardMetaData::SHARD_ENTITY_TYPE)->load($this->getShardId());
+      ->getStorage(ShardMetadata::SHARD_ENTITY_TYPE)->load($this->getShardId());
     if ( ! $fieldCollectionEntity ) {
       throw new ShardNotFoundException(
         sprintf('Shard not found. Id: ' . $this->getShardId())
@@ -411,37 +411,37 @@ class Shard {
     $this->setHostNid(
       $this->getRequiredShardValue(
         $fieldCollectionEntity,
-        ShardMetaData::FIELD_NAME_HOST_NODE_ID
+        ShardMetadata::FIELD_NAME_HOST_NODE_ID
       )
     );
     $this->setHostFieldName(
       $this->getRequiredShardValue(
         $fieldCollectionEntity,
-        ShardMetaData::FIELD_NAME_HOST_FIELD
+        ShardMetadata::FIELD_NAME_HOST_FIELD
       )
     );
     $this->setDelta(
       $this->getRequiredShardValue(
         $fieldCollectionEntity,
-        ShardMetaData::FIELD_NAME_HOST_FIELD_INSTANCE
+        ShardMetadata::FIELD_NAME_HOST_FIELD_INSTANCE
       )
     );
     $this->setViewMode(
       $this->getRequiredShardValue(
         $fieldCollectionEntity,
-        ShardMetaData::FIELD_NAME_VIEW_MODE
+        ShardMetadata::FIELD_NAME_VIEW_MODE
       )
     );
     $this->setLocation(
       $this->getRequiredShardValue(
         $fieldCollectionEntity,
-        ShardMetaData::FIELD_NAME_LOCATION
+        ShardMetadata::FIELD_NAME_LOCATION
       )
     );
     $this->setLocalContent(
       $this->getRequiredShardValue(
         $fieldCollectionEntity,
-        ShardMetaData::FIELD_NAME_LOCAL_CONTENT
+        ShardMetadata::FIELD_NAME_LOCAL_CONTENT
       )
     );
   }

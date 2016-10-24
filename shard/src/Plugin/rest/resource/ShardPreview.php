@@ -1,6 +1,6 @@
 <?php
 
-namespace Drupal\sloth\Plugin\rest\resource;
+namespace Drupal\shard\Plugin\rest\resource;
 
 use Drupal\Core\Session\AccountProxyInterface;
 use Drupal\rest\Plugin\ResourceBase;
@@ -11,22 +11,22 @@ use Psr\Log\LoggerInterface;
 use Drupal\Core\Entity\EntityDisplayRepositoryInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Render\RendererInterface;
-use Drupal\sloth\Exceptions\SlothMissingDataException;
-use Drupal\sloth\Exceptions\SlothUnexptectedValueException;
-use Drupal\sloth\Exceptions\SlothNotFoundException;
+use Drupal\shard\Exceptions\ShardMissingDataException;
+use Drupal\shard\Exceptions\ShardUnexpectedValueException;
+use Drupal\shard\Exceptions\ShardNotFoundException;
 
 /**
- * Provides a REST resource to get a display (view) of a sloth.
+ * Provides a REST resource to get a display (view) of a shard.
  *
  * @RestResource(
- *   id = "sloth_preview",
- *   label = @Translation("Sloth preview"),
+ *   id = "shard_preview",
+ *   label = @Translation("Shard preview"),
  *   uri_paths = {
- *     "canonical" = "/sloth/preview/{nid}/{viewmode}"
+ *     "canonical" = "/shard/preview/{nid}/{viewmode}"
  *   }
  * )
  */
-class SlothPreview extends ResourceBase {
+class ShardPreview extends ResourceBase {
 
   /**
    * A current user instance.
@@ -86,7 +86,7 @@ class SlothPreview extends ResourceBase {
       $plugin_id,
       $plugin_definition,
       $container->getParameter('serializer.formats'),
-      $container->get('logger.factory')->get('sloth'),
+      $container->get('logger.factory')->get('shard'),
       $container->get('current_user'),
       \Drupal::service('entity_display.repository'),
       \Drupal::service('entity_type.manager'),
@@ -99,8 +99,13 @@ class SlothPreview extends ResourceBase {
    *
    * Returns a list of bundles for specified entity.
    *
-   * @throws \Symfony\Component\HttpKernel\Exception\HttpException
-   *   Throws exception expected.
+   * @param null $nid
+   * @param null $view_mode
+   * @return \Drupal\rest\ResourceResponse Throws exception expected.
+   * Throws exception expected.
+   * @throws \Drupal\shard\Exceptions\ShardMissingDataException
+   * @throws \Drupal\shard\Exceptions\ShardNotFoundException
+   * @throws \Drupal\shard\Exceptions\ShardUnexpectedValueException
    */
   public function get($nid = NULL, $view_mode = NULL) {
     // Use current user after pass authentication to validate access.
@@ -109,22 +114,22 @@ class SlothPreview extends ResourceBase {
     }
     //Were both params given?
     if ( is_null($nid) || is_null($view_mode) ) {
-      throw new SlothMissingDataException($this->t('Missing argument getting sloth display.'));
+      throw new ShardMissingDataException($this->t('Missing argument getting shard display.'));
     }
     //Does the view mode exist?
     $all_view_modes = $this->entity_display_repository->getViewModes('node');
     if ( ! key_exists($view_mode, $all_view_modes) ) {
-      throw new SlothUnexptectedValueException($this->t('Unknown sloth view mode: ' . $view_mode));
+      throw new ShardUnexpectedValueException($this->t('Unknown shard view mode: ' . $view_mode));
     }
-    //Load the sloth.
-    $sloth_node = $this->entity_type_manager->getStorage('node')->load($nid);
-    //Does the sloth exist?
-    if ( is_null($sloth_node) ) {
-      throw new SlothNotFoundException('Cannot find sloth ' . $nid);
+    //Load the shard.
+    $shard_node = $this->entity_type_manager->getStorage('node')->load($nid);
+    //Does the shard exist?
+    if ( is_null($shard_node) ) {
+      throw new ShardNotFoundException('Cannot find shard ' . $nid);
     }
-    //Render the selected display of the sloth.
+    //Render the selected display of the shard.
     $view_builder = $this->entity_type_manager->getViewBuilder('node');
-    $render_array = $view_builder->view($sloth_node, $view_mode);
+    $render_array = $view_builder->view($shard_node, $view_mode);
     $html = (string)$this->renderer->renderRoot($render_array);
     return new ResourceResponse($html);
   }

@@ -63,7 +63,7 @@ interface ShardMetadataInterface {
 
   /**
    * @param \string[] $shardTypeNames
-   * @return ShardMetaData
+   * @return ShardMetadata
    */
   public function setShardTypeNames($shardTypeNames);
 

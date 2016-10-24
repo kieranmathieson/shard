@@ -20,7 +20,7 @@ use Symfony\Component\EventDispatcher\EventDispatcher;
 
 use Drupal\Component\Uuid\Uuid;
 
-class ShardMetaData implements ShardMetadataInterface {
+class ShardMetadata implements ShardMetadataInterface {
 
   /**
    * Names of defined shard types.
@@ -174,7 +174,7 @@ class ShardMetaData implements ShardMetadataInterface {
       $container->get('entity_type.bundle.info'),
       $container->get('config.factory'),
       $container->get('entity_field.manager'),
-      $container->get('event-dispatcher')
+      $container->get('event_dispatcher')
     );
   }
 
@@ -187,7 +187,7 @@ class ShardMetaData implements ShardMetadataInterface {
 
   /**
    * @param \string[] $shardTypeNames
-   * @return ShardMetaData
+   * @return ShardMetadata
    */
   public function setShardTypeNames($shardTypeNames) {
     $this->shardTypeNames = $shardTypeNames;
@@ -265,10 +265,10 @@ class ShardMetaData implements ShardMetadataInterface {
       //Is this content type allowed?
     if (in_array($bundleName, $this->configAllowedContentTypes)) {
       //Get definitions of the fields in the bundle.
-      $fieldDefs = $this->entityFieldManager
+      $fieldDefinitions = $this->entityFieldManager
         ->getFieldDefinitions('node', $bundleName);
       //Loop across fields.
-      foreach ($fieldDefs as $fieldName => $fieldDef) {
+      foreach ($fieldDefinitions as $fieldName => $fieldDef) {
         //Is the field allowed?
         if (in_array($fieldName, $this->configAllowedFields)) {
           //Is the field type allowed?

@@ -1,6 +1,6 @@
 <?php
 
-namespace Drupal\sloth\Plugin\rest\resource;
+namespace Drupal\shard\Plugin\rest\resource;
 
 use Drupal\Core\Session\AccountProxyInterface;
 use Drupal\rest\Plugin\ResourceBase;
@@ -10,20 +10,21 @@ use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 use Psr\Log\LoggerInterface;
 use Drupal\Core\Entity\EntityDisplayRepositoryInterface;
 use Drupal\Core\Config\ConfigFactoryInterface;
-use Symfony\Component\Validator\Exception\MissingOptionsException;
+
+use Drupal\shard\Exceptions\ShardMissingDataException;
 
 /**
  * Provides a resource to get eligible view modes.
  *
  * @RestResource(
- *   id = "sloth_view_mode_list",
- *   label = @Translation("Sloth view mode list"),
+ *   id = "shard_view_mode_list",
+ *   label = @Translation("Shard view mode list"),
  *   uri_paths = {
- *     "canonical" = "/sloth/view-modes"
+ *     "canonical" = "/shard/view-modes"
  *   }
  * )
  */
-class SlothViewModeList extends ResourceBase {
+class ShardViewModeList extends ResourceBase {
 
   /**
    * A current user instance.
@@ -58,6 +59,8 @@ class SlothViewModeList extends ResourceBase {
    *   A logger instance.
    * @param \Drupal\Core\Session\AccountProxyInterface $current_user
    *   A current user instance.
+   * @param \Drupal\Core\Config\ConfigFactoryInterface $config_factory
+   * @param \Drupal\Core\Entity\EntityDisplayRepositoryInterface $entity_display_repository
    */
   public function __construct(
     array $configuration,
@@ -83,7 +86,7 @@ class SlothViewModeList extends ResourceBase {
       $plugin_id,
       $plugin_definition,
       $container->getParameter('serializer.formats'),
-      $container->get('logger.factory')->get('sloth'),
+      $container->get('logger.factory')->get('shard'),
       $container->get('current_user'),
       \Drupal::service('config.factory'),
       \Drupal::service('entity_display.repository')
@@ -100,10 +103,10 @@ class SlothViewModeList extends ResourceBase {
     if (!$this->currentUser->hasPermission('access content')) {
       throw new AccessDeniedHttpException();
     }
-    $config_settings = $this->config_factory->get('sloth.settings');
+    $config_settings = $this->config_factory->get('shard.settings');
     $config_view_modes = $config_settings->get('view_modes');
     if ( sizeof($config_view_modes) == 0 ) {
-      throw new MissingOptionsException('No sloth view modes available.');
+      throw new ShardMissingDataException('No shard view modes available.');
     }
     //Get definitions of all the view modes that exist for nodes,
     //so can return the label of the Chosen Ones.

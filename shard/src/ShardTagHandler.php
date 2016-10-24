@@ -296,7 +296,7 @@ class ShardTagHandler {
       //Remove existing attributes.
       $this->domProcessor->stripElementAttributes( $first );
       //Add right attributes.
-      $first->setAttribute(ShardMetaData::SHARD_TYPE_TAG, 'shard');
+      $first->setAttribute(ShardMetadata::SHARD_TYPE_TAG, 'shard');
 //      $first->setAttribute(
 //        'data-shard-id',
 //        $this->shardInsertionDetails->getShardNid()
@@ -315,7 +315,7 @@ class ShardTagHandler {
         );
       }
       //Process next tag.
-      $this->ckHtmlToDbHtmlProcessOneTag($domDoc);
+      $this->ckHtmlToDbHtmlProcessOneTag($domDocument);
     } // End if found a shard to process.
   }
 
@@ -663,6 +663,11 @@ class ShardTagHandler {
   /**
    * Convert the shard tags in some HTML code from DB
    * format to view format.
+   *
+   * The shard filter calls this method, passing the content to change.
+   * Drupal will call this method for each field and delta that it
+   * applies to.
+   *
    * @param string $dbHtml
    * @return string
    */
@@ -697,7 +702,7 @@ class ShardTagHandler {
 //      $event = new ShardTranslationEvent();
       //Get the id of the shard. This is the id of a field_collection_item entity.
       $shardId = $this->domProcessor->getRequiredElementAttribute(
-        $first, ShardMetaData::SHARD_ID_TAG);
+        $first, ShardMetadata::SHARD_ID_TAG);
       //Load the shard.
       $shard = new Shard(
         \Drupal::service('database'),
@@ -782,12 +787,12 @@ class ShardTagHandler {
       //Is it an element?
       if (get_class($element) == 'DOMElement') {
         //Is it a shard?
-        if ($element->hasAttribute(ShardMetaData::SHARD_TYPE_TAG)) {
+        if ($element->hasAttribute(ShardMetadata::SHARD_TYPE_TAG)) {
           //Is it the right type of shard?
-          if ($element->getAttribute(ShardMetaData::SHARD_TYPE_TAG) == $shardTypeName) {
+          if ($element->getAttribute(ShardMetadata::SHARD_TYPE_TAG) == $shardTypeName) {
             //Is it an unprocessed tag (not converted to CK format yet)?
             $already_processed = $element->hasAttribute('class')
-              && $element->getAttribute('class') == ShardMetaData::CLASS_IDENTIFYING_WIDGET;
+              && $element->getAttribute('class') == ShardMetadata::CLASS_IDENTIFYING_WIDGET;
             if ( ! $already_processed ) {
               //Yes - return the element.
               return $element;
@@ -1018,7 +1023,7 @@ class ShardTagHandler {
     $first = $this->domProcessor->findFirstUnprocessedShardTag($divs, $shardTypeName);
     if ($first) {
       $shardId = $this->domProcessor->getRequiredElementAttribute(
-        $first, ShardMetaData::SHARD_ID_TAG);
+        $first, ShardMetadata::SHARD_ID_TAG);
       //Load the shard.
       $shard = new Shard(
         \Drupal::service('database'),
@@ -1030,13 +1035,13 @@ class ShardTagHandler {
       $shard->setShardId($shardId);
       $shard->loadShardCollectionItemFromStorage();
       //Add the guest nid to the element for CK.
-      $first->setAttribute(ShardMetaData::SHARD_GUEST_NID_TAG, $shard->getGuestNid());
+      $first->setAttribute(ShardMetadata::SHARD_GUEST_NID_TAG, $shard->getGuestNid());
       //Add the view mode to the element for CK.
       $viewMode = $shard->getViewMode();
-      $first->setAttribute(ShardMetaData::SHARD_VIEW_FORMAT, $viewMode);
+      $first->setAttribute(ShardMetadata::SHARD_VIEW_FORMAT, $viewMode);
       //Add the class that the widget uses to see that an element is a widget.
       $first->setAttribute('class',
-        str_replace('[type]', $shardTypeName, ShardMetaData::CLASS_IDENTIFYING_WIDGET));
+        str_replace('[type]', $shardTypeName, ShardMetadata::CLASS_IDENTIFYING_WIDGET));
       //Make the HTML element to show the embed.
       $embeddingElement = $shard->createShardEmbeddingElement();
       //Insert the HTML into the wrapper tag.

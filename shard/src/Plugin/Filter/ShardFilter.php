@@ -38,11 +38,14 @@ class ShardFilter extends FilterBase {
   public function process($text, $langCode) {
     $container = \Drupal::getContainer();
     $shardTagHandler = new ShardTagHandler(
+      $container->get('shard.metadata'),
+      $container->get('shard.dom_processor'),
       $container->get('entity_type.manager'),
       $container->get('entity_display.repository'),
       $container->get('entity.query'),
       $container->get('renderer'),
-      $container->get('database')
+      $container->get('database'),
+      $container->get('event_dispatcher')
     );
     $text = $shardTagHandler->dbHtmlToViewHtml($text);
 
