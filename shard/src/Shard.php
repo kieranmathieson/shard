@@ -8,28 +8,85 @@
 
 namespace Drupal\shard;
 
+use Drupal\Core\Database\Connection;
+use Drupal\shard\Exceptions\ShardMissingDataException;
+use Drupal\shard\Exceptions\ShardNotFoundException;
+use Drupal\shard\Exceptions\ShardUnexpectedValueException;
+use Symfony\Component\DependencyInjection\ContainerInterface;
+use Drupal\Core\Entity\EntityTypeManagerInterface;
+use Drupal\field_collection\Entity\FieldCollectionItem;
+use Drupal\Core\Render\RendererInterface;
+
+
+//use Drupal\shard\ShardMetadataInterface;
 
 class Shard {
+
+  /**
+   * Database connection service.
+   *
+   * @var Connection
+   */
+  protected $databaseConnection;
+
+  /**
+   * Entity type manager.
+   *
+   * @var \Drupal\Core\Entity\EntityTypeManagerInterface
+   */
+  protected $entityTypeManager;
+
+  /**
+   * @var \Drupal\Core\Render\RendererInterface $renderer
+   */
+  protected $renderer;
+
+  /**
+   * @var ShardDomProcessor
+   */
+  protected $domProcessor;
+
+  /**
+   * Service with metadata about shards, e.g., eligible fields.
+   *
+   * @var ShardMetadataInterface
+   */
+  protected $metadata;
+
+  /**
+   * Id of the collection item for this shard.
+   *
+   * @var int
+   */
+  protected $shardId = NULL;
+
+  /**
+   * Shard type. Same as the module name.
+   *
+   * @var string
+   */
+  protected $shardType = NULL;
+
   /**
    * The nid of the node where the shard is being inserted.
    *
    * @var integer
    */
-  protected $hostNid;
+  protected $hostNid = NULL;
 
   /**
    * The nid of the shard being inserted.
    *
    * @var integer
    */
-  protected $guestNid;
+  protected $guestNid = NULL;
 
   /**
    * The name of the field the shard is inserted into.
    *
    * @var string
    */
-  protected $fieldName;
+  protected $hostFieldName = NULL;
 
   /**
    * Which value of the field has the shard inserted.
@@ -37,28 +94,99 @@ class Shard {
    *
    * @var integer
    */
-  protected $delta;
+  protected $delta = NULL;
 
   /**
    * The approximate location of the shard tag in the host field's content.
    *
    * @var integer
    */
-  protected $location;
+  protected $location = NULL;
 
   /**
    * Which view mode is used to display the shard.
    *
    * @var string
    */
-  protected $viewMode;
+  protected $viewMode = NULL;
 
   /**
    * Content local to the insertion.
    *
    * @var string
    */
-  protected $localContent;
+  protected $localContent = NULL;
+
+  public function __construct(
+      Connection $databaseConnection,
+      ShardMetadataInterface $metadata,
+      EntityTypeManagerInterface $entityTypeManager,
+      RendererInterface $renderer,
+      ShardDomProcessor $domProcessor
+      ) {
+    $this->databaseConnection = $databaseConnection;
+    $this->metadata = $metadata;
+    $this->entityTypeManager = $entityTypeManager;
+    $this->renderer = $renderer;
+    $this->domProcessor = $domProcessor;
+  }
+
+  public static function create(ContainerInterface $container) {
+    return new static(
+      $container->get('database'),
+      $container->get('shard.metadata'),
+      $container->get('entity_type.manager'),
+      $container->get('renderer'),
+      $container->get('shard.dom_processor')
+//      $container->get('entity_display.repository'),
+//      $container->get('entity.query'),
+//      $container->get('renderer'),
+    );
+  }
+
+  /**
+   * @return int
+   */
+  public function getShardId() {
+    return $this->shardId;
+  }
+
+  /**
+   * @param int $shardId
+   * @return \Drupal\shard\Shard
+   * @throws \Drupal\shard\Exceptions\ShardUnexpectedValueException
+   */
+  public function setShardId($shardId) {
+    if ( ! $this->metadata->isValidNid($shardId) ) {
+      throw new ShardUnexpectedValueException(
+        sprintf('Bad shard id: %s', $shardId)
+      );
+    }
+    $this->shardId = $shardId;
+    return $this;
+  }
+
+  /**
+   * @return string
+   */
+  public function getShardType() {
+    return $this->shardType;
+  }
+
+  /**
+   * @param string $shardType
+   * @return \Drupal\shard\Shard
+   * @throws \Drupal\shard\Exceptions\ShardUnexpectedValueException
+   */
+  public function setShardType($shardType) {
+    if ( ! $this->metadata->isValidShardTypeName($shardType) ) {
+      throw new ShardUnexpectedValueException(
+        sprintf('Bad shard type: %s', $shardType)
+      );
+    }
+    $this->shardType = $shardType;
+    return $this;
+  }
 
   /**
    * @return int
@@ -69,11 +197,38 @@ class Shard {
 
   /**
    * @param int $hostNid
-   * @return Shard
+   * @return \Drupal\shard\Shard
+   * @throws \Drupal\shard\Exceptions\ShardUnexpectedValueException
    */
   public function setHostNid($hostNid) {
+    if ( ! $this->metadata->isValidNid($hostNid) ) {
+      throw new ShardUnexpectedValueException(
+        sprintf('Bad host nid: %s', $hostNid)
+      );
+    }
     $this->hostNid = $hostNid;
     return $this;
+  }
+
+  /**
+   * Load the host node.
+   *
+   * @return \Drupal\Core\Entity\EntityInterface|null
+   * @throws \Drupal\shard\Exceptions\ShardNotFoundException
+   */
+  public function loadHostNodeFromStorage() {
+    if ( ! $this->getHostNid() ) {
+      throw new ShardNotFoundException(
+        sprintf('Host nid not set.')
+      );
+    }
+    $hostNode = $this->entityTypeManager->getStorage('node')->load($this->getHostNid());
+    if ( ! $hostNode ) {
+      throw new ShardNotFoundException(
+        sprintf('Cannot load host node with nid: %s', $this->getHostNid())
+      );
+    }
+    return $hostNode;
   }
 
   /**
@@ -85,26 +240,67 @@ class Shard {
 
   /**
    * @param int $guestNid
-   * @return Shard
+   * @return \Drupal\shard\Shard
+   * @throws \Drupal\shard\Exceptions\ShardUnexpectedValueException
    */
   public function setGuestNid($guestNid) {
+    if ( ! $this->metadata->isValidNid($guestNid) ) {
+      throw new ShardUnexpectedValueException(
+        sprintf('Bad guest nid: %s', $guestNid)
+      );
+    }
     $this->guestNid = $guestNid;
     return $this;
   }
 
   /**
+   * Load the guest node.
+   *
+   * @return \Drupal\Core\Entity\EntityInterface|null
+   * @throws \Drupal\shard\Exceptions\ShardNotFoundException
+   */
+  public function loadGuestNodeFromStorage() {
+    if ( ! $this->getGuestNid() ) {
+      throw new ShardNotFoundException(
+        sprintf('Guest nid not set.')
+      );
+    }
+    /* @var \Drupal\Core\Entity\EntityInterface $guestNode */
+    $guestNode = $this->entityTypeManager->getStorage('node')->load($this->getGuestNid());
+    if ( ! $guestNode ) {
+      throw new ShardNotFoundException(
+        sprintf('Cannot load guest node with nid: %s', $this->getGuestNid())
+      );
+    }
+    return $guestNode;
+  }
+
+  /**
    * @return string
    */
-  public function getFieldName() {
-    return $this->fieldName;
+  public function getHostFieldName() {
+    return $this->hostFieldName;
   }
 
   /**
    * @param string $fieldName
-   * @return Shard
+   * @return \Drupal\shard\Shard
+   * @throws \Drupal\shard\Exceptions\ShardUnexpectedValueException
    */
-  public function setFieldName($fieldName) {
-    $this->fieldName = $fieldName;
+  public function setHostFieldName($fieldName) {
+    //Can check field name only if bundle is known.
+    if ( $this->getHostNid() ) {
+      /* @var \Drupal\Core\Entity\EntityInterface $guestNode */
+      $hostNode = $this->loadHostNodeFromStorage();
+      $bundle = $hostNode->bundle();
+      $eligibleFields = $this->metadata->listEligibleFieldsForBundle($bundle);
+      if ( ! in_array($fieldName, $eligibleFields) ) {
+        throw new ShardUnexpectedValueException(
+          sprintf('Field name not eligible: %s', $fieldName)
+        );
+      }
+    }
+    $this->hostFieldName = $fieldName;
     return $this;
   }
 
@@ -117,9 +313,15 @@ class Shard {
 
   /**
    * @param int $delta
-   * @return Shard
+   * @return \Drupal\shard\Shard
+   * @throws \Drupal\shard\Exceptions\ShardUnexpectedValueException
    */
   public function setDelta($delta) {
+    if ( ! $delta || ! is_numeric($delta) || $delta < 0 ) {
+      throw new ShardUnexpectedValueException(
+        sprintf('Bad delta: %s', $delta)
+      );
+    }
     $this->delta = $delta;
     return $this;
   }
@@ -133,10 +335,15 @@ class Shard {
 
   /**
    * @param int $location
-   * @return Shard
+   * @return \Drupal\shard\Shard
+   * @throws \Drupal\shard\Exceptions\ShardUnexpectedValueException
    */
   public function setLocation($location) {
-    $this->location = $location;
+    if ( ! $location || ! is_numeric($location) || $location < 0 ) {
+      throw new ShardUnexpectedValueException(
+        sprintf('Bad location: %s', $location)
+      );
+    }    $this->location = $location;
     return $this;
   }
 
@@ -149,9 +356,15 @@ class Shard {
 
   /**
    * @param string $viewMode
-   * @return Shard
+   * @return \Drupal\shard\Shard
+   * @throws \Drupal\shard\Exceptions\ShardUnexpectedValueException
    */
   public function setViewMode($viewMode) {
+    if ( ! $this->metadata->isValidViewModeName($viewMode) ) {
+      throw new ShardUnexpectedValueException(
+        sprintf('Bad view mode: %s', $viewMode)
+      );
+    }
     $this->viewMode = $viewMode;
     return $this;
   }
@@ -171,5 +384,151 @@ class Shard {
     $this->localContent = $localContent;
     return $this;
   }
+
+  /**
+   * Load a shard collection item from storage. Shard id (collection item
+   * entity key) must be set.
+   *
+   * @throws \Drupal\shard\Exceptions\ShardMissingDataException
+   * @throws \Drupal\shard\Exceptions\ShardNotFoundException
+   */
+  public function loadShardCollectionItemFromStorage() {
+    if ( ! $this->getShardId() ) {
+      throw new ShardMissingDataException(
+        'Cannot load shard, id missing.'
+      );
+    }
+    //Load the definition of the shard.
+    /* @var \Drupal\field_collection\Entity\FieldCollectionItem $fieldCollectionEntity */
+    $fieldCollectionEntity = $this->entityTypeManager
+      ->getStorage(ShardMetaData::SHARD_ENTITY_TYPE)->load($this->getShardId());
+    if ( ! $fieldCollectionEntity ) {
+      throw new ShardNotFoundException(
+        sprintf('Shard not found. Id: ' . $this->getShardId())
+      );
+    }
+    //Populate each of the shard's properties.
+    $this->setHostNid(
+      $this->getRequiredShardValue(
+        $fieldCollectionEntity,
+        ShardMetaData::FIELD_NAME_HOST_NODE_ID
+      )
+    );
+    $this->setHostFieldName(
+      $this->getRequiredShardValue(
+        $fieldCollectionEntity,
+        ShardMetaData::FIELD_NAME_HOST_FIELD
+      )
+    );
+    $this->setDelta(
+      $this->getRequiredShardValue(
+        $fieldCollectionEntity,
+        ShardMetaData::FIELD_NAME_HOST_FIELD_INSTANCE
+      )
+    );
+    $this->setViewMode(
+      $this->getRequiredShardValue(
+        $fieldCollectionEntity,
+        ShardMetaData::FIELD_NAME_VIEW_MODE
+      )
+    );
+    $this->setLocation(
+      $this->getRequiredShardValue(
+        $fieldCollectionEntity,
+        ShardMetaData::FIELD_NAME_LOCATION
+      )
+    );
+    $this->setLocalContent(
+      $this->getRequiredShardValue(
+        $fieldCollectionEntity,
+        ShardMetaData::FIELD_NAME_LOCAL_CONTENT
+      )
+    );
+  }
+
+  /**
+   * Get the value of a required field from a shard. Assumes the field
+   * is single valued, so getString will be sufficient.
+   *
+   * @param FieldCollectionItem $shard Field collection item
+   *        with shard insertion data.
+   * @param string $fieldName Name of the field whose value is needed.
+   * @return mixed Field's value.
+   * @throws \Drupal\shard\Exceptions\ShardMissingDataException
+   */
+  protected function getRequiredShardValue(FieldCollectionItem $shard, $fieldName) {
+    $value = $shard->{$fieldName}->getString();
+    if ( strlen($value) == 0 ) {
+      throw new ShardMissingDataException(
+        sprintf('Missing required shard field value: %s', $fieldName)
+      );
+    }
+    return $value;
+  }
+
+  public function saveShardToStorage() {
+
+  }
+
+  /**
+   * Create a DOMElement containing the HTML to show a shard in a
+   * guest node, ready to be wrapped in the right container
+   * for CKEditor format, or view format.
+   *
+   * @return \DOMElement
+   */
+  public function createShardEmbeddingElement() {
+    //Load the node to be embedded.
+    $guestNode = $this->loadGuestNodeFromStorage();
+    //Render the selected display of the shard.
+    $viewBuilder = $this->entityTypeManager->getViewBuilder('node');
+    $renderArray = $viewBuilder->view($guestNode, $this->getViewMode());
+    $viewHtml = (string)$this->renderer->renderRoot($renderArray);
+    //DOMify it.
+    //Wrap in a body tag to make processing easier.
+    $viewDocument = $this->domProcessor->createDomDocumentFromHtml('<body>' . $viewHtml . '</body>');
+    //Get local content.
+    $localContent = $this->getLocalContent();
+    //Add local content, if any, to the rendered display. The rendered view
+    // mode must have a div with the class local-content.
+    if ($localContent) {
+      $this->insertLocalContentIntoViewHtml( $viewDocument, $localContent );
+    }
+    return $viewDocument->getElementsByTagName('body')->item(0);
+  }
+
+  /**
+   * Add local content to HTML of a view of a shard.
+   * The view HTML must has a div with the class local-content.
+   *
+   * @param \DOMDocument $destinationDocument HTML to insert local content into.
+   * @param string $localContent HTML to insert.
+   * @throws \Drupal\shard\Exceptions\ShardMissingDataException
+   */
+  protected function insertLocalContentIntoViewHtml(\DOMDocument $destinationDocument, $localContent) {
+    if ( $localContent ) {
+      $destinationContainer = $this->domProcessor->findLocalContentContainerInDoc($destinationDocument);
+      if (! $destinationContainer) {
+        throw new ShardMissingDataException(
+          'Problem detected during shard processing. Local content, but no '
+          . 'local content container.'
+        );
+      }
+      else {
+        //The local content container should have no children.
+        $this->domProcessor->removeElementChildren($destinationContainer);
+        //Copy the children of the local content to the container.
+        //Wrap in body tag to make the local content easier to find later.
+        $localContentDoc = $this->domProcessor->createDomDocumentFromHtml(
+          '<body>' . $localContent . '</body>'
+        );
+        $localContentDomified
+          = $localContentDoc->getElementsByTagName('body')->item(0);
+        $this->domProcessor->copyElementChildren(
+          $localContentDomified, $destinationContainer);
+      }
+    } //End of local content.
+  }
+
 
 }

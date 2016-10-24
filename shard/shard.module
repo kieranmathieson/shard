@@ -1,0 +1,185 @@
+<?php
+
+/**
+ * @file
+ * Contains shard.module.
+ */
+
+use Drupal\Core\Routing\RouteMatchInterface;
+use Drupal\Core\Form\FormStateInterface;
+//use Drupal\Core\Entity\EntityInterface;
+//use Drupal\Component\Utility\Html;
+use Drupal\shard\ShardTagHandler;
+//use Drupal\views\ViewExecutable;
+
+/**
+ * Implements hook_help().
+ * @param $route_name
+ * @param \Drupal\Core\Routing\RouteMatchInterface $route_match
+ * @return string
+ */
+function shard_help($route_name, RouteMatchInterface $route_match) {
+  switch ($route_name) {
+    // Main module help for the shard module.
+    case 'help.page.shard':
+      $output = '';
+      $output .= '<h3>' . t('About') . '</h3>';
+      $output .= '<p>' . t('Testing the shard idea with shards.') . '</p>';
+      return $output;
+
+    default:
+  }
+}
+
+
+/**
+ * Implements hook_form_alter().
+ *
+ * Convert DB tag format to CKEditor tag format.
+ */
+function shard_form_alter(&$form, FormStateInterface $formState, $form_id) {
+  //Is this a form for an entity?
+  if ( method_exists($formState->getFormObject(), 'getEntity') ) {
+    //Aye.
+    //Get some services.
+    /* @var \Drupal\shard\ShardMetadataInterface $metadata */
+    $metadata = \Drupal::service('shard.metadata');
+    //Get the fields that are eligible to be sharded.
+    $eligibleFieldsForNode = $metadata->listEligibleFieldsForNode(
+      $formState->getFormObject()->getEntity()
+    );
+    //What eligible fields are on the form?
+    $eligibleFieldsOnForm = [];
+    foreach( $eligibleFieldsForNode as $eligibleFieldName ) {
+      if ( isset( $form[$eligibleFieldName] ) ) {
+        $eligibleFieldsOnForm[] = $eligibleFieldName;
+      }
+    }
+    //Are there any eligible fields on the form?
+    if ( sizeof($eligibleFieldsOnForm) > 0 ) {
+      //Attach JS setting to show that this field is eligible.
+      $form['#attached']['drupalSettings']['shard']['eligibleField']
+        = $eligibleFieldsOnForm;
+      //Convert the shard tags from DB format to CK format.
+      $container = \Drupal::getContainer();
+      $shard_tag_handler = new ShardTagHandler(
+        $container->get('entity_type.manager'),
+        $container->get('entity_display.repository'),
+        $container->get('entity.query'),
+        $container->get('renderer'),
+        $container->get('database')
+      );
+      //For each field...
+      foreach( $eligibleFieldsOnForm as $field_name ) {
+        //For each instance...
+        foreach($form[$field_name]['widget'] as $instance_index=>$instance_data) {
+          //There are many keys, not just instance indexes. Just do the numeric ones.
+          if ( is_numeric($instance_index) ) {
+            //Is this a formatted text field?
+            if ( $instance_data['#type'] == 'text_format' ) {
+              //Is there default data?
+              if (isset($instance_data['#default_value']) && $instance_data['#default_value'] ) {
+                //Convert it.
+                $dbHtml = $instance_data['#default_value'];
+                $ck_html = $shard_tag_handler->dbHtmlToCkHtml($dbHtml);
+                $form[$field_name]['widget'][$instance_index]['#default_value'] = $ck_html;
+              }
+              //Is there a summary field?
+              if ( isset($instance_data['summary']['#default_value'])
+                    && $instance_data['summary']['#default_value'] ) {
+                //Convert it.
+                $dbHtml = $instance_data['summary']['#default_value'];
+                $ck_html = $shard_tag_handler->dbHtmlToCkHtml($dbHtml);
+                $form[$field_name]['widget'][$instance_index]['summary']['#default_value'] = $ck_html;
+
+              }
+            } //End the field is text_format type.
+          } //It's a field instance (numeric key).
+        } //End foreach widget.
+      } //End foreach eligible field on the form.
+    } //End if there are eligible fields.
+  } //End this is an entity form.
+}
+
+
+//  if ( ! \Drupal::currentUser()->hasPermission('edit shard shard field manually') ) {
+//    $form['field_shard']['#type'] = 'hidden';
+//  }
+//  else {
+//Is this a form for entities?
+
+//  if ( isset($form['#entity_builders']) ) {
+//    $form['actions']['submit']['#submit'][] = 'shard_replace_tags_in_form_fields';
+//    $form['actions']['preview']['#submit'][] = 'shard_replace_tags_in_form_fields';
+//    $form['actions']['publish']['#submit'][] = 'shard_replace_tags_in_form_fields';
+//    $form['actions']['unpublish']['#submit'][] = 'shard_replace_tags_in_form_fields';
+//    $form['actions']['delete']['#submit'][] = 'shard_remove_shards_on_delete';
+//  }
+
+//  $form_state->getFormObject()->getEntity()
+//  }
+
+
+//function shard_entity_view_alter(array &$build,
+//                               \Drupal\Core\Entity\EntityInterface $entity,
+//                               \Drupal\Core\Entity\Display\EntityViewDisplayInterface $display) {
+//
+//  $container = \Drupal::getContainer();
+//  $shard_tag_handler = new ShardTagHandler(
+////    \Drupal::service('shard.eligible_fields'),
+//    $container->get('entity_type.manager'),
+//    $container->get('entity_display.repository'),
+//    $container->get('entity.query'),
+//    $container->get('renderer')
+//  );
+//  $r=89;
+////  $shard_tag_handler->dbTagsToViewTags($build, $entity);
+//}
+
+
+
+function shard_replace_tags_in_form_fields($form, &$form_state) {
+  $container = \Drupal::getContainer();
+  $shard_tag_handler = new ShardTagHandler(
+//    \Drupal::service('shard.eligible_fields'),
+    $container->get('entity_type.manager'),
+    $container->get('entity_display.repository'),
+    $container->get('entity.query'),
+    $container->get('renderer'),
+    $container->get('database')
+  );
+  $shard_tag_handler->entityCkTagsToDbTags($form_state);
+}
+
+function shard_remove_shards_on_delete($form, &$form_state) {
+  drupal_set_message('delete');
+}
+
+function shard_node_presave(Drupal\Core\Entity\EntityInterface $entity) {
+  $container = \Drupal::getContainer();
+  $shard_tag_handler = new ShardTagHandler(
+    $container->get('entity_type.manager'),
+    $container->get('entity_display.repository'),
+    $container->get('entity.query'),
+    $container->get('renderer'),
+    $container->get('database')
+  );
+  $shard_tag_handler->entityCkTagsToDbTags($entity);
+}
+
+
+function shard_node_insert(Drupal\Core\Entity\EntityInterface $entity) {
+  if ( isset($_REQUEST['temp_nid']) ) {
+    $container = \Drupal::getContainer();
+    $shard_tag_handler = new ShardTagHandler(
+      $container->get('entity_type.manager'),
+      $container->get('entity_display.repository'),
+      $container->get('entity.query'),
+      $container->get('renderer'),
+      $container->get('database')
+    );
+    $shard_tag_handler->replaceTempNid($entity);
+  }
+}
+
+

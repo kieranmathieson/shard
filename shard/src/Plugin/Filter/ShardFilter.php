@@ -6,47 +6,45 @@
  * Time: 11:16 AM
  */
 
-namespace Drupal\sloth\Plugin\Filter;
+namespace Drupal\shard\Plugin\Filter;
 
 use Drupal\filter\Plugin\FilterBase;
 use Drupal\filter\FilterProcessResult;
-use Drupal\sloth\SlothTagHandler;
+use Drupal\shard\ShardTagHandler;
 
 /**
  * @Filter(
- *   id = "filter_sloth",
- *   title = @Translation("Sloth Filter"),
- *   description = @Translation("Show sloths."),
+ *   id = "filter_shard",
+ *   title = @Translation("Shard Filter"),
+ *   description = @Translation("Show shards."),
  *   type = Drupal\filter\Plugin\FilterInterface::TYPE_TRANSFORM_REVERSIBLE,
  * )
  */
-class SlothFilter extends FilterBase {
+class ShardFilter extends FilterBase {
 
   /**
    * Performs the filter processing.
    *
    * @param string $text
    *   The text string to be filtered.
-   * @param string $langcode
+   * @param string $langCode
    *   The language code of the text to be filtered.
    *
    * @return \Drupal\filter\FilterProcessResult
-   *   The filtered text, wrapped in a FilterProcessResult object, and possibly
-   *   with associated assets, cacheability metadata and placeholders.
+   *   The filtered text, wrapped in a FilterProcessResult object.
    *
    * @see \Drupal\filter\FilterProcessResult
    */
-  public function process($text, $langcode) {
+  public function process($text, $langCode) {
     $container = \Drupal::getContainer();
-    $sloth_tag_handler = new SlothTagHandler(
-//    \Drupal::service('sloth.eligible_fields'),
+    $shardTagHandler = new ShardTagHandler(
       $container->get('entity_type.manager'),
       $container->get('entity_display.repository'),
       $container->get('entity.query'),
       $container->get('renderer'),
       $container->get('database')
     );
-    $text = $sloth_tag_handler->dbHtmlToViewHtml($text);
+    $text = $shardTagHandler->dbHtmlToViewHtml($text);
 
     return new FilterProcessResult($text);
   }

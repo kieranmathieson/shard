@@ -8,46 +8,27 @@
 
 namespace Drupal\shard;
 
-use Drupal\Core\Entity\EntityTypeManagerInterface;
-use Drupal\shard\Exceptions\ShardBadDataTypeException;
+//use Drupal\shard\Exceptions\ShardBadDataTypeException;
+//use Drupal\shard\Exceptions\ShardMissingDataException;
 use Drupal\shard\Exceptions\ShardMissingDataException;
-use Symfony\Component\DependencyInjection\ContainerInterface;
-use Drupal\Core\Entity\Query\QueryFactory;
-use Drupal\field_collection\Entity\FieldCollectionItem;
-use Drupal\Core\Entity\EntityDisplayRepositoryInterface;
 use Drupal\shard\Exceptions\ShardUnexpectedValueException;
-use Drupal\shard\Exceptions\ShardNotFoundException;
-use Drupal\Core\Render\RendererInterface;
-use Drupal\Core\Database\Connection;
+use Symfony\Component\DependencyInjection\ContainerInterface;
 
 class ShardDomProcessor {
+
+  /**
+   * @var ShardMetadataInterface
+   */
+  protected $metadata;
 
   /**
    * ShardTagHandler constructor.
    *
    * Load shard configuration data set by admin.
-   * @param \Drupal\Core\Entity\EntityTypeManagerInterface $entity_type_manager
-   * @param \Drupal\Core\Entity\EntityDisplayRepositoryInterface $entity_display_repository
-   * @param \Drupal\Core\Entity\Query\QueryFactory $entity_query
-   * @param \Drupal\Core\Render\RendererInterface $renderer
-   * @param \Drupal\Core\Database\Connection $database_connection
-   * @internal param \Drupal\Core\Config\ConfigFactoryInterface $configFactory
+   * @param \Drupal\shard\ShardMetadataInterface $metadata
    */
   public function __construct(
-//                       EligibleFieldsInterface $eligible_fields,
-                       EntityTypeManagerInterface $entity_type_manager,
-                       EntityDisplayRepositoryInterface $entity_display_repository,
-                       QueryFactory $entity_query,
-                       RendererInterface $renderer,
-                       Connection $database_connection) {
-//    $this->eligibleFields = $eligible_fields;
-    $this->eligibleFields = new EligibleFields(
-      \Drupal::service('config.factory'),
-      \Drupal::service('entity_field.manager')
-    );
-    $this->entityTypeManager = $entity_type_manager;
-    $this->entityDisplayRepository = $entity_display_repository;
-
+    ShardMetadataInterface $metadata) {
   }
 
   /**
@@ -56,16 +37,9 @@ class ShardDomProcessor {
    */
   public static function create(ContainerInterface $container) {
     return new static(
-//      $container->get('shard.eligible_fields'),
-      $container->get('entity_type.manager'),
-      $container->get('entity_display.repository'),
-      $container->get('entity.query'),
-      $container->get('renderer'),
-      $container->get('database')
+      $container->get('shard.metadata')
     );
   }
-
-
 
   /**
    * Get the HTML represented by a DOMElement.
@@ -73,7 +47,7 @@ class ShardDomProcessor {
    * @param \DOMElement $element The element.
    * @return string HTML The HTML.
    */
-  protected function getDomElementOuterHtml(\DOMElement $element) {
+  public function getElementOuterHtml(\DOMElement $element) {
     $tmp_doc = new \DOMDocument();
     //Make sure there's a body element.
     if ( $element->tagName != 'body' && $element->getElementsByTagName('body')->length == 0 ) {
@@ -96,14 +70,14 @@ class ShardDomProcessor {
    * @param \DOMElement $element Element to process.
    * @return string The HTML.
    */
-  protected function getDomElementInnerHtml(\DOMElement $element){
+  public function getElementInnerHtml(\DOMElement $element){
     $result = '';
     foreach( $element->childNodes as $child ) {
       if ( get_class($child) == 'DOMText' ) {
         $result .= $child->wholeText;
       }
       else {
-        $result .= $this->getDomElementOuterHtml($child);
+        $result .= $this->getElementOuterHtml($child);
       }
     }
     return $result;
@@ -115,8 +89,8 @@ class ShardDomProcessor {
    * @param string $class Class to find.
    * @return \DOMElement|false Element with class.
    */
-  protected function findFirstWithClass(\DOMNodeList $elements, $class) {
-    return $this->findFirstWithAttribute($elements, 'class', $class);
+  public function findFirstElementWithClass(\DOMNodeList $elements, $class) {
+    return $this->findFirstElementWithAttribute($elements, 'class', $class);
   }
 
   /**
@@ -124,7 +98,7 @@ class ShardDomProcessor {
    *
    * @param  \DOMElement $element
    */
-  protected function removeElementChildren(\DOMElement $element) {
+  public function removeElementChildren(\DOMElement $element) {
     $children = [];
     if ( $element->hasChildNodes() ) {
       foreach ( $element->childNodes as $child_node ){
@@ -143,7 +117,7 @@ class ShardDomProcessor {
    *
    * @param \DOMElement $element
    */
-  protected function stripAttributes(\DOMElement $element) {
+  public function stripElementAttributes(\DOMElement $element) {
     $attributes = $element->attributes;
     $attribute_names = [];
     foreach( $attributes as $attribute => $value ) {
@@ -160,10 +134,10 @@ class ShardDomProcessor {
    * Return first element with a given value for a given attribute.
    * @param \DOMNodeList $elements
    * @param string $attribute Attribute to check.
-   * @param string $value Value to check for.
+   * @param string $value Value to check for. * for any.
    * @return \DOMElement|false An element.
    */
-  protected function findFirstWithAttribute(\DOMNodeList $elements, $attribute, $value) {
+  public function findFirstElementWithAttribute(\DOMNodeList $elements, $attribute, $value) {
     //For each element
     /* @var \DOMElement $element */
     foreach($elements as $element) {
@@ -171,14 +145,14 @@ class ShardDomProcessor {
       if (get_class($element) == 'DOMElement') {
         //Does it have the attribute and value?
         if ($element->hasAttribute($attribute)) {
-          if ($element->getAttribute($attribute) == $value) {
+          if ($value == '*' || $element->getAttribute($attribute) == $value) {
             //Yes - return the element.
             return $element;
           }
         }
         //Test children.
         if ($element->hasChildNodes()) {
-          $result = $this->findFirstWithAttribute($element->childNodes, $attribute, $value);
+          $result = $this->findFirstElementWithAttribute($element->childNodes, $attribute, $value);
           if ($result) {
             return $result;
           }
@@ -189,83 +163,147 @@ class ShardDomProcessor {
   }
 
 
-
   /**
-   * Get a shard id from a tag.
+   * Return the first HTML shard tag  of a given type that has not been processed.
    *
-   * @param \DOMElement $element The tag.
-   * @return string The shard id.
-   * @throws \Drupal\shard\Exceptions\ShardBadDataTypeException
-   * @throws \Drupal\shard\Exceptions\ShardMissingDataException
+   * @param \DOMNodeList $elements
+   * @return \DOMElement|false An element.
    */
-  protected function getShardId(\DOMElement $element) {
-    $shard_id = $element->getAttribute('data-shard-id');
-    if ( ! $shard_id ) {
-      throw new ShardMissingDataException('Shard id missing for shard DB tag.');
+  public function findFirstUnprocessedShardTag(\DOMNodeList $elements) {
+    //For each element
+    /* @var \DOMElement $element */
+    foreach($elements as $element) {
+      //Is it an element?
+      if (get_class($element) == 'DOMElement') {
+        //Is it a shard tag?
+        if ($element->hasAttribute(ShardMetaData::SHARD_TYPE_TAG)) {
+          //Is it a known tag?
+          $shardTypeName = strtolower($element->getAttribute(ShardMetaData::SHARD_TYPE_TAG));
+          if ( in_array($shardTypeName, $this->metadata->getShardTypeNames() ) ) {
+            //Is it unprocessed?
+            $processed
+              =    $element->hasAttribute(
+                     ShardMetaData::SHARD_TAG_BEEN_PROCESSED_ATTRIBUTE
+                   )
+                && $element->getAttribute(
+                     ShardMetaData::SHARD_TAG_BEEN_PROCESSED_ATTRIBUTE
+                   ) == ShardMetaData::SHARD_TAG_HAS_BEEN_PROCESSED_VALUE;
+            if (! $processed ) {
+              //Yes - return the element.
+              return $element;
+            }
+          }
+          else {
+            //Got a shard whose type name is not known.
+            //If the user is an author or admin, warn him/her.
+            if ( ShardUtilities::currentUserHasRole(['author', 'admin']) ) {
+              drupal_set_message(t(
+                'Reference to unknown shard type: %name',
+                ['%name' => $shardTypeName]
+              ), 'notice');
+            }
+          }
+        }
+        //Test children.
+        if ($element->hasChildNodes()) {
+          $result = $this->findFirstUnprocessedShardTag($element->childNodes);
+          if ($result) {
+            return $result;
+          }
+        }
+      }
     }
-    if ( ! is_numeric($shard_id) ) {
-      throw new ShardBadDataTypeException(
-        sprintf('Argh! Shard id is not numeric: %s.', $shard_id)
-      );
-    }
-    return $shard_id;
+    return false;
   }
 
   /**
-   * Get the value of a required field from a shard.
+   * Is an element a shard tag?
    *
-   * @param FieldCollectionItem $shard Field collection item
-   *        with shard insertion data.
-   * @param string $field_name Name of the field whose value is needed.
-   * @return mixed Field's value.
-   * @throws \Drupal\shard\Exceptions\ShardMissingDataException
+   * @param \DOMElement $element
+   * @return bool
    */
-  protected function getRequiredShardValue(FieldCollectionItem $shard, $field_name) {
-    $value = $shard->{$field_name}->getString();
-    if ( strlen($value) == 0 ) {
-      throw new ShardMissingDataException(
-        sprintf('Missing required shard field value: %s', $field_name)
-      );
-    }
-    return $value;
+  public function isShardElement(\DOMElement $element) {
+    return $element->hasAttribute(ShardMetaData::SHARD_TYPE_TAG);
   }
 
   /**
-   * Add local content to HTML of a view of a shard.
-   * The view HTML must has a div with the class local-content.
+   * Has a shard been processed already?
    *
-   * @param \DOMDocument $destination_document HTML to insert local content into.
-   * @param string $local_content HTML to insert.
-   * @throws \Drupal\shard\Exceptions\ShardMissingDataException
+   * Note: only works for elements that are shards.
+   *
+   * @param \DOMElement $element Shard element to check.
+   * @return bool Result.
+   * @throws \Drupal\shard\Exceptions\ShardUnexpectedValueException
    */
-  protected function insertLocalContentIntoViewHtml(\DOMDocument $destination_document, $local_content) {
-    if ( $local_content ) {
-      $destination_container = $this->findLocalContentContainerInDoc($destination_document);
-      if (! $destination_container) {
-        throw new ShardMissingDataException(
-          'Problem detected during shard processing. Local content, but no '
-          . 'local content container.'
-        );
-      }
-      else {
-        //The local content container should have no children.
-        $this->removeElementChildren($destination_container);
-        //Copy the children of the local content to the container.
-        $local_content_doc = new \DOMDocument();
-        $local_content_doc->preserveWhiteSpace = FALSE;
-        $this->loadDomDocumentHtml($local_content_doc, '<body>' . $local_content . '</body>');
-        $local_content_domified
-          = $local_content_doc->getElementsByTagName('body')->item(0);
-        $this->copyChildren($local_content_domified, $destination_container);
-      }
-    } //End of local content.
+  public function isShardElementProcessed(\DOMElement $element) {
+    if ( ! $this->isShardElement($element) ) {
+      throw new ShardUnexpectedValueException(
+        'Passed nonshard to isShardElementProcessed.'
+      );
+    }
+    //Is it unprocessed?
+    $processed
+      =    $element->hasAttribute(
+             ShardMetaData::SHARD_TAG_BEEN_PROCESSED_ATTRIBUTE
+           )
+        && $element->getAttribute(
+             ShardMetaData::SHARD_TAG_BEEN_PROCESSED_ATTRIBUTE
+           ) == ShardMetaData::SHARD_TAG_HAS_BEEN_PROCESSED_VALUE;
+    return $processed;
+  }
+
+
+  public function markShardAsProcessed(\DOMElement $element) {
+    //Is it a shard?
+    if ( ! $this->isShardElement($element) ) {
+      throw new ShardUnexpectedValueException(
+        'Passed nonshard to markShardAsProcessed.'
+      );
+    }
+    $element->setAttribute(
+      ShardMetaData::SHARD_TAG_BEEN_PROCESSED_ATTRIBUTE,
+      ShardMetaData::SHARD_TAG_HAS_BEEN_PROCESSED_VALUE
+    );
+  }
+  /**
+   * Is a shard a known type?
+   *
+   * @param \DOMElement $element
+   * @return bool
+   * @throws \Drupal\shard\Exceptions\ShardUnexpectedValueException
+   */
+  public function isKnownShardType(\DOMElement $element) {
+    //Is it a shard?
+    if ( ! $this->isShardElement($element) ) {
+      throw new ShardUnexpectedValueException(
+        'Passed nonshard to isKnownShardType.'
+      );
+    }
+    //Is it a known tpe?
+    $shardTypeName = strtolower($element->getAttribute(ShardMetaData::SHARD_TYPE_TAG));
+    return in_array($shardTypeName, $this->metadata->getShardTypeNames());
+  }
+
+  /**
+   * Tell authors and admins if there is a shard tag with an unknown type.
+   *
+   * @param string $typeName Unknown type name.
+   */
+  public function reportUnknownShardType($typeName) {
+    //If the user is an author or admin, warn him/her.
+    if ( ShardUtilities::currentUserHasRole(['author', 'admin']) ) {
+      drupal_set_message(
+        t('Reference to unknown shard type: %name', ['%name' => $typeName]),
+        'notice'
+      );
+    }
   }
 
   /**
    * @param \DOMDocument $document
    * @return bool|\DOMElement Element with the class local-content.
    */
-  protected function findLocalContentContainerInDoc(\DOMDocument $document) {
+  public function findLocalContentContainerInDoc(\DOMDocument $document) {
     $divs = $document->getElementsByTagName('div');
     /* @var \DOMElement $div */
     foreach ($divs as $div) {
@@ -283,7 +321,7 @@ class ShardDomProcessor {
    * @param \DOMElement $element Element to look in
    * @return bool|\DOMElement Element with local content, false if not found.
    */
-  protected function findElementWithLocalContent(\DOMElement $element) {
+  public function findElementWithLocalContent(\DOMElement $element) {
     if ( $element->tagName == 'div'
         && $element->hasAttribute('class')
         && $element->getAttribute('class') == 'local-content') {
@@ -311,20 +349,37 @@ class ShardDomProcessor {
    * @param \DOMElement $replacement Element to rebuild from. Assume it is
    *  wrapped in a body tag.
    */
-  protected function replaceElementContents(
+  public function replaceElementContents(
     \DOMElement $element,
     \DOMElement $replacement
   ) {
     //Remove the children of the element.
     $this->removeElementChildren($element);
     //Remove the attributes of the element.
-    $this->stripAttributes($element);
+    $this->stripElementAttributes($element);
     //Find the element to copy from.
     //$source_element = $replacement->getElementsByTagName('body')->item(0);
     //Copy the attributes of the HTML to the element.
 //    $this->duplicateAttributes($replacement, $element);
     //Copy the child nodes of the HTML to the element.
-    $this->copyChildren($replacement, $element);
+    $this->copyElementChildren($replacement, $element);
+  }
+
+  /**
+   * Replace the children of one DOM element with the children of another.
+   *
+   * @param \DOMElement $element Element to rebuild.
+   * @param \DOMElement $replacement Element to rebuild from. Assume it is
+   *  wrapped in a body tag.
+   */
+  public function replaceElementChildren(
+    \DOMElement $element,
+    \DOMElement $replacement
+  ) {
+    //Remove the children of the element.
+    $this->removeElementChildren($element);
+    //Copy the child nodes of the HTML to the element.
+    $this->copyElementChildren($replacement, $element);
   }
 
   /**
@@ -333,7 +388,7 @@ class ShardDomProcessor {
    * @param \DOMElement $from Duplicate attributes from this element...
    * @param \DOMElement $to ...to this element.
    */
-  protected function duplicateAttributes(\DOMElement $from, \DOMElement $to) {
+  public function duplicateElementAttributes(\DOMElement $from, \DOMElement $to) {
     //Remove existing attributes.
     foreach($to->attributes as $attribute) {
       $to->removeAttribute($attribute->name);
@@ -350,7 +405,7 @@ class ShardDomProcessor {
    * @param \DOMElement $from Copy children from this element...
    * @param \DOMElement $to ...to this element.
    */
-  protected function copyChildren(\DOMElement $from, \DOMElement $to) {
+  public function copyElementChildren(\DOMElement $from, \DOMElement $to) {
     $kids = [];
     foreach ($from->childNodes as $child_node) {
       $kids[] = $child_node;
@@ -361,59 +416,16 @@ class ShardDomProcessor {
     }
   }
 
-
-  /**
-   * Get the view mode stored in a shard collection item.
-   *
-   * @param \Drupal\field_collection\Entity\FieldCollectionItem $collectionItem
-   * @return string The view mode.
-   * @throws \Drupal\shard\Exceptions\ShardUnexptectedValueException
-   */
-  protected function getCollectionViewMode(FieldCollectionItem $collectionItem) {
-    //Get the view mode.
-    $view_mode = $this->getRequiredShardValue(
-      $collectionItem,
-      'field_display_mode'
-    );
-    //Does the view mode exist?
-    $all_view_modes = $this->entityDisplayRepository->getViewModes('node');
-    if ( ! key_exists($view_mode, $all_view_modes) ) {
-      throw new ShardUnexptectedValueException(
-        sprintf('Unknown shard view mode: %s', $view_mode)
-      );
-    }
-    return $view_mode;
-  }
-
-
-  /**
-   * Get the shard node referenced by a shard collection item.
-   *
-   * @param \Drupal\field_collection\Entity\FieldCollectionItem $collectionItem
-   * @return \Drupal\Core\Entity\EntityInterface Shard node.
-   * @throws \Drupal\shard\Exceptions\ShardNotFoundException
-   */
-  protected function getCollectionItemShard(FieldCollectionItem $collectionItem) {
-    $shard_nid = $collectionItem->getHostId();
-    $shard_node = $this->entityTypeManager->getStorage('node')->load($shard_nid);
-    //Does the shard exist?
-    if ( ! $shard_node ) {
-      throw new ShardNotFoundException('Cannot find shard ' . $shard_nid);
-    }
-    return $shard_node;
-  }
-
-
   /**
    * Load HTML into a DOMDocument, with error handling.
    *
-   * @param \DOMDocument $dom_document Doc to parse the HTML.
+   * @param \DOMDocument $document Doc to parse the HTML.
    * @param string $html HTML to parse.
    */
-  protected function loadDomDocumentHtml( \DOMDocument $dom_document, $html ) {
+  public function loadDomDocumentFromHtml(\DOMDocument $document, $html ) {
     libxml_use_internal_errors(true);
     try {
-      $dom_document->loadHTML($html);
+      $document->loadHTML($html);
     } catch (\Exception $e) {
     }
     $message = '';
@@ -426,5 +438,35 @@ class ShardDomProcessor {
       $message = "Errors parsing HTML:<br>\n" . $message;
       \Drupal::logger('shards')->error($message);
     }
+  }
+
+  /**
+   * Create a DOMDocument from some HTML.
+   *
+   * @param string $html HTML.
+   * @return \DOMDocument DOM document created from HTML.
+   */
+  public function createDomDocumentFromHtml($html) {
+    $domDocument = new \DOMDocument();
+    $domDocument->preserveWhiteSpace = false;
+    $this->loadDomDocumentFromHtml($domDocument, $html);
+    return $domDocument;
+  }
+
+  /**
+   * Return the value of a required attribute of an element.
+   *
+   * @param \DOMElement $element Element to check.
+   * @param string $attribute Attribute name.
+   * @return string Attribute value.
+   * @throws \Drupal\shard\Exceptions\ShardMissingDataException
+   */
+  public function getRequiredElementAttribute(\DOMElement $element, $attribute) {
+    if ( ! $element->hasAttribute($attribute) ) {
+      throw new ShardMissingDataException(
+        sprintf('Element missing required %x attribute', $attribute)
+      );
+    }
+    return $element->getAttribute($attribute);
   }
 }

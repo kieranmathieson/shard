@@ -13,12 +13,21 @@ use Drupal\Core\Entity\Query\QueryFactory;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Drupal\Core\Entity\EntityTypeBundleInfoInterface;
 use Drupal\Core\Config\ConfigFactoryInterface;
-use Drupal\Core\Entity\EntityInterface;
 use Drupal\Core\Entity\EntityFieldManagerInterface;
+use Drupal\node\NodeInterface;
+use Drupal\Component\EventDispatcher\ContainerAwareEventDispatcher;
+use Symfony\Component\EventDispatcher\EventDispatcher;
 
-use Drupal\shard\Exceptions\ShardMissingDataException;
+use Drupal\Component\Uuid\Uuid;
 
 class ShardMetaData implements ShardMetadataInterface {
+
+  /**
+   * Names of defined shard types.
+   *
+   * @var string[]
+   */
+  protected $shardTypeNames;
 
   /**
    * Values that are known to be valid nids.
@@ -100,6 +109,20 @@ class ShardMetaData implements ShardMetadataInterface {
    */
   protected $entityQuery;
 
+  /**
+   * Used to interact with sharders (modules that implement shards).
+   *
+   * @var EventDispatcher
+   */
+  protected $eventDispatcher;
+
+  /**
+   * Cache of eligible field names for bundles.
+   *
+   * @var string[]
+   */
+  protected $eligibleFieldsCache = [];
+
 
   protected $bundleInfoManager;
 
@@ -108,13 +131,15 @@ class ShardMetaData implements ShardMetadataInterface {
       QueryFactory $entity_query,
       EntityTypeBundleInfoInterface $bundle_info_manager,
       ConfigFactoryInterface $config_factory,
-      EntityFieldManagerInterface $entity_field_manager
+      EntityFieldManagerInterface $entity_field_manager,
+      ContainerAwareEventDispatcher $eventDispatcher
       ) {
     $this->entityDisplayRepository = $entity_display_repository;
     $this->entityQuery = $entity_query;
     $this->bundleInfoManager = $bundle_info_manager;
     $this->configFactory = $config_factory;
     $this->entityFieldManager = $entity_field_manager;
+    $this->eventDispatcher = $eventDispatcher;
     //Load valid nids.
     $query = $this->entityQuery->get('node');
     $result = $query->execute();
@@ -131,10 +156,15 @@ class ShardMetaData implements ShardMetadataInterface {
     $this->configAllowedFields = $this->shardConfigs->get('fields');
     //Get allowed field types.
     $this->configAllowedFieldTypes = explode(',', $this->shardConfigs->get('field_types'));
+    //Ask sharders (modules that implement shards) to register.
+    $pluginRegisterEvent = new ShardPluginRegisterEvent();
+    $this->eventDispatcher->dispatch('shard.register_plugins', $pluginRegisterEvent);
+    //Send shard type names to metadata object.
+    $this->setShardTypeNames($pluginRegisterEvent->getRegisteredPlugins());
   }
 
   /**
-   * @param \Symfony\Component\DependencyInjection\ContainerInterface $container
+   * @param ContainerInterface $container
    * @return static
    */
   public static function create(ContainerInterface $container) {
@@ -143,8 +173,35 @@ class ShardMetaData implements ShardMetadataInterface {
       $container->get('entity.query'),
       $container->get('entity_type.bundle.info'),
       $container->get('config.factory'),
-      $container->get('entity_field.manager')
+      $container->get('entity_field.manager'),
+      $container->get('event-dispatcher')
     );
+  }
+
+  /**
+   * @return \string[]
+   */
+  public function getShardTypeNames() {
+    return $this->shardTypeNames;
+  }
+
+  /**
+   * @param \string[] $shardTypeNames
+   * @return ShardMetaData
+   */
+  public function setShardTypeNames($shardTypeNames) {
+    $this->shardTypeNames = $shardTypeNames;
+    return $this;
+  }
+
+  /**
+   * Check whether a name is a valid shard type name.
+   *
+   * @param string $name Name to check.
+   * @return bool Is it valid?
+   */
+  public function isValidShardTypeName($name) {
+    return in_array($name, $this->getShardTypeNames());
   }
 
   /**
@@ -152,13 +209,13 @@ class ShardMetaData implements ShardMetadataInterface {
    * @return bool
    */
   public function isValidNid($value) {
+    //UUIDs used as placeholders during node insert.
+    if ( Uuid::isValid($value) ) {
+      return TRUE;
+    }
     //Must be a number.
     if ( ! is_numeric($value) ) {
       return FALSE;
-    }
-    //Can be unknown.
-    if ( $value == self::UNKNOWN ) {
-      return TRUE;
     }
     return in_array($value, $this->existingNids);
   }
@@ -168,7 +225,7 @@ class ShardMetaData implements ShardMetadataInterface {
    * @param $value
    * @return bool
    */
-  public function isValidViewMode($value) {
+  public function isValidViewModeName($value) {
     return in_array($value, $this->viewModes);
   }
 
@@ -176,66 +233,58 @@ class ShardMetaData implements ShardMetadataInterface {
    * @param $value
    * @return bool
    */
-  public function isValidContentType($value) {
+  public function isValidContentTypeName($value) {
     return in_array($value, $this->contentTypes);
   }
 
-  public function addValidGuestField($field_name) {
-    if ( ! $field_name ) {
-      throw new ShardMissingDataException(
-        sprintf('Missing field name')
-      );
+  /**
+   * Return a list of the names of fields that are allowed to have
+   * shards in them.
+   *
+   * @param \Drupal\node\NodeInterface $node
+   * @return array Names of fields that may have sloths embedded.
+   * @internal param \Drupal\Core\Entity\EntityInterface $entity Entity with the fields.
+   */
+  public function listEligibleFieldsForNode(NodeInterface $node) {
+    $bundle_name = $node->bundle();
+    return $this->listEligibleFieldsForBundle( $bundle_name );
+  }
+
+  /**
+   * Return a list of the names of fields that are allowed to have
+   * shards in them.
+   *
+   * @param string $bundleName Name of the bundle type, e.g., article.
+   * @return array Names of fields that may have sloths embedded.
+   */
+  public function listEligibleFieldsForBundle($bundleName) {
+    if ( isset($this->eligibleFieldsCache[$bundleName]) ) {
+      return $this->eligibleFieldsCache[$bundleName];
     }
-    $this->validGuestFields[] = $field_name;
-    return $this;
-  }
-
-  /**
-   * Return a list of the names of fields that are allowed to have
-   * sloth shards in them.
-   *
-   * @param EntityInterface $entity Entity with the fields.
-   * @return array Names of fields that may have sloths embedded.
-   */
-  public function listEntityEligibleFields(EntityInterface $entity) {
-    $entity_type_name = $entity->getEntityTypeId();
-    $bundle_name = $entity->bundle();
-    return $this->listEligibleFields( $entity_type_name, $bundle_name );
-  }
-
-  /**
-   * Return a list of the names of fields that are allowed to have
-   * sloth shards in them.
-   *
-   * @param string $entity_type_name Name of the entity type, e.g., node.
-   * @param string $bundle_name Name of the bundle type, e.g., article.
-   * @return array Names of fields that may have sloths embedded.
-   */
-  public function listEligibleFields($entity_type_name, $bundle_name) {
-    $field_names = [];
-    //Is this a node?
-    if ($entity_type_name == 'node') {
+    $fieldNames = [];
       //Is this content type allowed?
-      if (in_array($bundle_name, $this->configAllowedContentTypes)) {
-        //Get definitions of the fields in the bundle.
-        $field_defs = $this->entityFieldManager->getFieldDefinitions('node', $bundle_name);
-        //Loop across fields.
-        foreach ($field_defs as $field_name => $field_def) {
-          //Is the field allowed?
-          if (in_array($field_name, $this->configAllowedFields)) {
-            //Is the field type allowed?
-            if (in_array(
-              $field_def->getFieldStorageDefinition()->getType(),
-              $this->configAllowedFieldTypes
-            )) {
-              //The field can have sloths in it.
-              $field_names[] = $field_name;
-            } //End field type is allowed.
-          } //End field is allowed.
-        } //End foreach.
-      } //End content type is allowed.
-    } //End entity is a node.
-    return $field_names;
+    if (in_array($bundleName, $this->configAllowedContentTypes)) {
+      //Get definitions of the fields in the bundle.
+      $fieldDefs = $this->entityFieldManager
+        ->getFieldDefinitions('node', $bundleName);
+      //Loop across fields.
+      foreach ($fieldDefs as $fieldName => $fieldDef) {
+        //Is the field allowed?
+        if (in_array($fieldName, $this->configAllowedFields)) {
+          //Is the field type allowed?
+          if (in_array(
+            $fieldDef->getFieldStorageDefinition()->getType(),
+            $this->configAllowedFieldTypes
+          )) {
+            //The field can have sloths in it.
+            $fieldNames[] = $fieldName;
+          } //End field type is allowed.
+        } //End field is allowed.
+      } //End foreach.
+    } //End content type is allowed.
+    //Cache.
+    $this->eligibleFieldsCache[$bundleName] = $fieldNames;
+    return $fieldNames;
   }
 
 

@@ -9,4 +9,8 @@ services:
     arguments: ['@event_dispatcher']
   shard.metadata:
     class: Drupal\shard\ShardMetaData
-    arguments: ['@entity_display.repository', '@entity.query', '@entity_type.bundle.info', '@config.factory', '@entity_field.manager']
+    arguments: ['@entity_display.repository', '@entity.query', '@entity_type.bundle.info', '@config.factory', '@entity_field.manager', '@event_dispatcher']
+  shard.dom_processor:
+    class: Drupal\shard\ShardDomProcessor
+  shard.utilities:
+    class: Drupal\shard\ShardUtilities

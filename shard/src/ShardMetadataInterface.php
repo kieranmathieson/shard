@@ -10,21 +10,70 @@
 
 namespace Drupal\shard;
 
-use Drupal\Core\Entity\EntityInterface;
+use Drupal\node\NodeInterface;
 
 interface ShardMetadataInterface {
 
+  //The name of the entity type used by the field collection module
+  //to store collection item data.
+  const SHARD_ENTITY_TYPE = 'field_collection_item';
+
+  //The name of the bundle of the field collection entity type that holds
+  //shard data.
+  const SHARD_BUNDLE_NAME = 'field_shard';
+
+  //HTML tag used to identify an element as a shard tag, and its type.
+  const SHARD_TYPE_TAG = 'data-shard-type';
+
+  //HTML tag used in the DB format of a tag to store the id of a collection
+  //item entity for a shard.
+  const SHARD_ID_TAG = 'data-shard-id';
+
+  //HTML tag used in CKEditor format to show the nid of the guest node.
+  const SHARD_GUEST_NID_TAG = 'data-guest-id';
+
+  //HTML tag used in CKEditor format to show the view mode to use.
+  const SHARD_VIEW_FORMAT = 'data-view-mode';
+
+  //HTML attribute to identify whether shard tag has been processed.
+  const SHARD_TAG_BEEN_PROCESSED_ATTRIBUTE = 'data-shard-processed';
+
+  //Value for SHARD_TAG_BEEN_PROCESSED_ATTRIBUTE that shows the tag
+  //has been processed.
+  const SHARD_TAG_HAS_BEEN_PROCESSED_VALUE = 'processed';
+
   /**
-   * Placeholder value showing that a nid is unknown.
-   *
-   * Null won't work as well, since many functions use null as a no-result
-   * indicator. Using a specific value distinguishes between those fallback
-   * cases, and the situation where we deliberately say that the nid is
-   * unknown.
-   *
-   * @var int
+   * This class tells CKEditor that some HTML is a widget. Replace [type]
+   * with shard type at runtime. Same as module name.
    */
-  const UNKNOWN = -666;
+  const CLASS_IDENTIFYING_WIDGET = '[type]-shard';
+
+  //Names of the fields in the shard bundle of collection item entities.
+  const FIELD_NAME_HOST_NODE_ID = 'field_host_node';
+  const FIELD_NAME_HOST_FIELD = 'field_host_field';
+  const FIELD_NAME_HOST_FIELD_INSTANCE = 'field_host_field_instance';
+  const FIELD_NAME_VIEW_MODE = 'field_display_mode';
+  const FIELD_NAME_LOCATION = 'field_shard_location';
+  const FIELD_NAME_LOCAL_CONTENT = 'field_custom_content';
+
+  /**
+   * @return \string[]
+   */
+  public function getShardTypeNames();
+
+  /**
+   * @param \string[] $shardTypeNames
+   * @return ShardMetaData
+   */
+  public function setShardTypeNames($shardTypeNames);
+
+  /**
+   * Check whether a name is a valid shard type name.
+   *
+   * @param string $name Name to check.
+   * @return bool Is it valid?
+   */
+  public function isValidShardTypeName($name);
 
   /**
    * Check whether nid is valid.
@@ -40,7 +89,7 @@ interface ShardMetadataInterface {
    * @param string $value Value to check.
    * @return bool True if valid, else false.
    */
-  public function isValidViewMode($value);
+  public function isValidViewModeName($value);
 
   /**
    * Check whether content type name is valid.
@@ -48,26 +97,25 @@ interface ShardMetadataInterface {
    * @param string $value Value to check.
    * @return bool True if valid, else false.
    */
-  public function isValidContentType($value);
+  public function isValidContentTypeName($value);
 
   /**
    * Return a list of the names of fields that are allowed to have
-   * sloth shards in them.
+   * shards in them.
    *
-   * @param EntityInterface $entity Entity with the fields.
+   * @param NodeInterface $node
    * @return array Names of fields that may have sloths embedded.
    */
-  public function listEntityEligibleFields(EntityInterface $entity);
+  public function listEligibleFieldsForNode(NodeInterface $node);
 
   /**
    * Return a list of the names of fields that are allowed to have
-   * sloth shards in them.
+   * shards in them.
    *
-   * @param string $entity_type_name Name of the entity type, e.g., node.
-   * @param string $bundle_name Name of the bundle type, e.g., article.
+   * @param string $bundleName Name of the bundle type, e.g., article.
    * @return array Names of fields that may have sloths embedded.
    */
-  public function listEligibleFields($entity_type_name, $bundle_name);
+  public function listEligibleFieldsForBundle($bundleName);
 
 
 }

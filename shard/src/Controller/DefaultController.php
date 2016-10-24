@@ -38,7 +38,7 @@ class DefaultController extends ControllerBase {
    */
   public function listPlugins() {
     $output = 'Plugins: ';
-    foreach($this->shardRegister->getPlugins() as $plugin) {
+    foreach($this->shardRegister->getShardTypeNames() as $plugin) {
       $output .= $plugin . ' ';
     }
 
