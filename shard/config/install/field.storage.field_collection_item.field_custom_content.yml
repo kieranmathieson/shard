@@ -4,6 +4,8 @@ dependencies:
   module:
     - field_collection
     - text
+_core:
+  default_config_hash: JUgxdBZd0HnxY17cRmSSuEWrI0pzCnKSaHfPEMEoEfk
 id: field_collection_item.field_custom_content
 field_name: field_custom_content
 entity_type: field_collection_item

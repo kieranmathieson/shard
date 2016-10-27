@@ -598,8 +598,8 @@ class ShardTagHandler {
       'field_name' => 'field_shard',
       'field_host_node' => $this->shardInsertionDetails->getHostNid(),
       'field_host_field' => $this->shardInsertionDetails->getFieldName(),
-      'field_host_field_instance' => $this->shardInsertionDetails->getDelta(),
-      'field_display_mode' => $this->shardInsertionDetails->getViewMode(),
+      'field_host_field_delta' => $this->shardInsertionDetails->getDelta(),
+      'field_view_mode' => $this->shardInsertionDetails->getViewMode(),
       'field_shard_location' => $this->shardInsertionDetails->getLocation(),
       'field_custom_content' => $this->shardInsertionDetails->getLocalContent(),
     ]);

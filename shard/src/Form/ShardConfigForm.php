@@ -267,8 +267,8 @@ class ShardConfigForm extends FormBase {
       $submitted_field_types = explode(',', $field_type_contents);
       $bad_field_types = [];
       //Get a list of available field types.
-      $data_type_defs = $this->typed_data_manager->getDefinitions();
-      $data_type_names = array_keys($data_type_defs);
+      $dataTypeDefinitions = $this->typed_data_manager->getDefinitions();
+      $data_type_names = array_keys($dataTypeDefinitions);
       //Keys are things like field_item:integer
       $available_field_types = [];
       foreach ($data_type_names as $data_type_name) {

@@ -1,0 +1,6 @@
+shard.config:
+  title: 'Configure shards'
+  description: 'Configure shards. They are views of nodes that can be inserted into other nodes.'
+  route_name: shard.config
+  weight: 50
+  parent: system.admin_config_content

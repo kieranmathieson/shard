@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/.idea/shard.iml" filepath="$PROJECT_DIR$/.idea/shard.iml" />
+      <module fileurl="file://$PROJECT_DIR$/../shard_system/.idea/shard.iml" filepath="$PROJECT_DIR$/../shard_system/.idea/shard.iml" />
     </modules>
   </component>
 </project>

@@ -423,7 +423,7 @@ class Shard {
     $this->setDelta(
       $this->getRequiredShardValue(
         $fieldCollectionEntity,
-        ShardMetadata::FIELD_NAME_HOST_FIELD_INSTANCE
+        ShardMetadata::FIELD_HOST_FIELD_DELTA
       )
     );
     $this->setViewMode(

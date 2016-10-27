@@ -3,14 +3,13 @@ status: true
 dependencies:
   module:
     - field_collection
-id: field_collection_item.field_display_mode
-field_name: field_display_mode
+id: field_collection_item.field_host_field_delta
+field_name: field_host_field_delta
 entity_type: field_collection_item
-type: string
+type: integer
 settings:
-  max_length: 255
-  is_ascii: false
-  case_sensitive: false
+  unsigned: false
+  size: normal
 module: core
 locked: false
 cardinality: 1

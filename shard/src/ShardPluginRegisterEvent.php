@@ -11,7 +11,7 @@ namespace Drupal\shard;
 use Symfony\Component\EventDispatcher\Event;
 
 class ShardPluginRegisterEvent extends Event {
-  protected $modulesWithPlugins;
+  protected $modulesWithPlugins = [];
 
   public function __construct() {
     $this->modulesWithPlugins = [];

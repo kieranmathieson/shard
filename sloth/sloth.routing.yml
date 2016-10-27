@@ -1,13 +1,4 @@
 
-sloth.config:
-  path: 'admin/config/content/sloth'
-  defaults:
-    _form:  '\Drupal\sloth\Form\SlothConfigForm'
-    _title: 'Configure sloths'
-  requirements:
-    _permission: 'administer content types'
-
-
 sloth.default_controller_shards:
   path: 'sloth/t1'
   defaults:

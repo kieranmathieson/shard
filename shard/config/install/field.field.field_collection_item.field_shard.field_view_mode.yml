@@ -2,14 +2,14 @@ langcode: en
 status: true
 dependencies:
   config:
-    - field.storage.field_collection_item.field_display_mode
+    - field.storage.field_collection_item.field_view_mode
     - field_collection.field_collection.field_shard
-id: field_collection_item.field_shard.field_display_mode
-field_name: field_display_mode
+id: field_collection_item.field_shard.field_view_mode
+field_name: field_view_mode
 entity_type: field_collection_item
 bundle: field_shard
-label: 'Display mode'
-description: 'Display mode to use for the embedding.'
+label: 'View mode'
+description: 'View mode to use for the embedding.'
 required: false
 translatable: false
 default_value: {  }

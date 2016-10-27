@@ -1,3 +1,10 @@
+shard.config:
+  path: 'admin/config/content/shard'
+  defaults:
+    _form:  '\Drupal\shard\Form\ShardConfigForm'
+    _title: 'Configure shards'
+  requirements:
+    _permission: 'administer content types'
 
 shard.default_controller_listPlugins:
   path: '/shard/list-plugins'
@@ -6,3 +13,4 @@ shard.default_controller_listPlugins:
     _title: 'Plugins'
   requirements:
     _permission: 'access content'
+

@@ -3,13 +3,16 @@ status: true
 dependencies:
   config:
     - field.field.field_collection_item.field_shard.field_custom_content
-    - field.field.field_collection_item.field_shard.field_display_mode
     - field.field.field_collection_item.field_shard.field_host_field
+    - field.field.field_collection_item.field_shard.field_host_field_delta
     - field.field.field_collection_item.field_shard.field_host_node
     - field.field.field_collection_item.field_shard.field_shard_location
+    - field.field.field_collection_item.field_shard.field_view_mode
     - field_collection.field_collection.field_shard
   module:
     - text
+_core:
+  default_config_hash: oVRDwuEzqS0kGMMKEwKm9nvns7byApE6fFF4ldmlmmY
 id: field_collection_item.field_shard.default
 targetEntityType: field_collection_item
 bundle: field_shard
@@ -22,13 +25,6 @@ content:
       placeholder: ''
     third_party_settings: {  }
     type: text_textarea
-  field_display_mode:
-    weight: 3
-    settings:
-      size: 60
-      placeholder: ''
-    third_party_settings: {  }
-    type: string_textfield
   field_host_field:
     weight: 1
     settings:
@@ -36,6 +32,12 @@ content:
       placeholder: ''
     third_party_settings: {  }
     type: string_textfield
+  field_host_field_delta:
+    weight: 7
+    settings:
+      placeholder: ''
+    third_party_settings: {  }
+    type: number
   field_host_node:
     weight: 0
     settings:
@@ -50,4 +52,11 @@ content:
       placeholder: ''
     third_party_settings: {  }
     type: number
+  field_view_mode:
+    weight: 6
+    settings:
+      size: 60
+      placeholder: ''
+    third_party_settings: {  }
+    type: string_textfield
 hidden: {  }

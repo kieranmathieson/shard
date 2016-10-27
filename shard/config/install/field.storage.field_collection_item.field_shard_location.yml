@@ -3,6 +3,8 @@ status: true
 dependencies:
   module:
     - field_collection
+_core:
+  default_config_hash: wQ7UJeO-54IjPhCaiI1sXMBwnXjYWQL9CCce_KtPvGs
 id: field_collection_item.field_shard_location
 field_name: field_shard_location
 entity_type: field_collection_item

@@ -51,8 +51,8 @@ interface ShardMetadataInterface {
   //Names of the fields in the shard bundle of collection item entities.
   const FIELD_NAME_HOST_NODE_ID = 'field_host_node';
   const FIELD_NAME_HOST_FIELD = 'field_host_field';
-  const FIELD_NAME_HOST_FIELD_INSTANCE = 'field_host_field_instance';
-  const FIELD_NAME_VIEW_MODE = 'field_display_mode';
+  const FIELD_HOST_FIELD_DELTA = 'field_host_field_delta';
+  const FIELD_NAME_VIEW_MODE = 'field_view_mode';
   const FIELD_NAME_LOCATION = 'field_shard_location';
   const FIELD_NAME_LOCAL_CONTENT = 'field_custom_content';
 

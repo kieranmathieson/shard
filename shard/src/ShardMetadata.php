@@ -27,7 +27,7 @@ class ShardMetadata implements ShardMetadataInterface {
    *
    * @var string[]
    */
-  protected $shardTypeNames;
+  protected $shardTypeNames = [];
 
   /**
    * Values that are known to be valid nids.
@@ -79,21 +79,21 @@ class ShardMetadata implements ShardMetadataInterface {
    *
    * @var string[]
    */
-  protected $configAllowedContentTypes;
+  protected $configAllowedContentTypes = [];
 
   /* What fields are allowed to have
    * shards embedded in them. An array of field names.
    *
    * @var string[]
    */
-  protected $configAllowedFields;
+  protected $configAllowedFields = [];
 
   /*  What field types are allowed to have
    * shards embedded in them. An array of field type names.
    *
    * @var string[]
    */
-  protected $configAllowedFieldTypes;
+  protected $configAllowedFieldTypes = [];
 
   /**
    * Entity metadata service.

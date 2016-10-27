@@ -4,6 +4,8 @@ dependencies:
   config:
     - field.storage.field_collection_item.field_host_node
     - field_collection.field_collection.field_shard
+_core:
+  default_config_hash: 5EjhhK5lzgqRYhZjxFoCGldH-KMD3eySkIZwAUSF_6Y
 id: field_collection_item.field_shard.field_host_node
 field_name: field_host_node
 entity_type: field_collection_item
@@ -17,12 +19,7 @@ default_value_callback: ''
 settings:
   handler: 'default:node'
   handler_settings:
-    target_bundles:
-#      article: article
-#      page: page
-#      book: book
-#      exercise: exercise
-#      sloth: sloth
+    target_bundles: null
     sort:
       field: _none
     auto_create: false

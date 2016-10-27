@@ -29,6 +29,7 @@ class ShardDomProcessor {
    */
   public function __construct(
     ShardMetadataInterface $metadata) {
+    $this->metadata = $metadata;
   }
 
   /**
@@ -164,7 +165,7 @@ class ShardDomProcessor {
 
 
   /**
-   * Return the first HTML shard tag  of a given type that has not been processed.
+   * Return the first HTML shard tag that has not been processed.
    *
    * @param \DOMNodeList $elements
    * @return \DOMElement|false An element.
@@ -222,7 +223,7 @@ class ShardDomProcessor {
    * @param \DOMElement $element
    * @return bool
    */
-  public function isShardElement(\DOMElement $element) {
+  public function isElementShard(\DOMElement $element) {
     return $element->hasAttribute(ShardMetadata::SHARD_TYPE_TAG);
   }
 
@@ -236,7 +237,7 @@ class ShardDomProcessor {
    * @throws \Drupal\shard\Exceptions\ShardUnexpectedValueException
    */
   public function isShardElementProcessed(\DOMElement $element) {
-    if ( ! $this->isShardElement($element) ) {
+    if ( ! $this->isElementShard($element) ) {
       throw new ShardUnexpectedValueException(
         'Passed nonshard to isShardElementProcessed.'
       );
@@ -255,7 +256,7 @@ class ShardDomProcessor {
 
   public function markShardAsProcessed(\DOMElement $element) {
     //Is it a shard?
-    if ( ! $this->isShardElement($element) ) {
+    if ( ! $this->isElementShard($element) ) {
       throw new ShardUnexpectedValueException(
         'Passed nonshard to markShardAsProcessed.'
       );
@@ -274,12 +275,12 @@ class ShardDomProcessor {
    */
   public function isKnownShardType(\DOMElement $element) {
     //Is it a shard?
-    if ( ! $this->isShardElement($element) ) {
+    if ( ! $this->isElementShard($element) ) {
       throw new ShardUnexpectedValueException(
         'Passed nonshard to isKnownShardType.'
       );
     }
-    //Is it a known tpe?
+    //Is it a known type?
     $shardTypeName = strtolower($element->getAttribute(ShardMetadata::SHARD_TYPE_TAG));
     return in_array($shardTypeName, $this->metadata->getShardTypeNames());
   }
@@ -368,18 +369,17 @@ class ShardDomProcessor {
   /**
    * Replace the children of one DOM element with the children of another.
    *
-   * @param \DOMElement $element Element to rebuild.
-   * @param \DOMElement $replacement Element to rebuild from. Assume it is
-   *  wrapped in a body tag.
+   * @param \DOMElement $target Element to rebuild.
+   * @param \DOMElement $source Element to rebuild from.
    */
   public function replaceElementChildren(
-    \DOMElement $element,
-    \DOMElement $replacement
+    \DOMElement $target,
+    \DOMElement $source
   ) {
     //Remove the children of the element.
-    $this->removeElementChildren($element);
+    $this->removeElementChildren($target);
     //Copy the child nodes of the HTML to the element.
-    $this->copyElementChildren($replacement, $element);
+    $this->copyElementChildren($source, $target);
   }
 
   /**
@@ -469,4 +469,12 @@ class ShardDomProcessor {
     }
     return $element->getAttribute($attribute);
   }
+
+  /**
+   * @return \Drupal\shard\ShardMetadataInterface
+   */
+  public function getMetadata() {
+    return $this->metadata;
+  }
+
 }

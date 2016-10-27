@@ -1,6 +1,7 @@
-#uuid: null
 langcode: en
 status: true
 dependencies: {  }
+_core:
+  default_config_hash: EXh9CyRG9CzKZXGQkxmC1LrbCVxOdJReyyPvBObxnZc
 id: field_shard
 label: field_shard

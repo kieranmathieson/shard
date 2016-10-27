@@ -2,16 +2,14 @@ langcode: en
 status: true
 dependencies:
   config:
-    - field.storage.field_collection_item.field_shard_location
+    - field.storage.field_collection_item.field_host_field_delta
     - field_collection.field_collection.field_shard
-_core:
-  default_config_hash: lvx-tLXljpDx0KYvCgPQ-xMDmBg31KGcFGIY9dcy6AU
-id: field_collection_item.field_shard.field_shard_location
-field_name: field_shard_location
+id: field_collection_item.field_shard.field_host_field_delta
+field_name: field_host_field_delta
 entity_type: field_collection_item
 bundle: field_shard
-label: Location
-description: 'Where in the host field is the shard inserted?'
+label: 'Host field delta'
+description: 'Which value of the host field the shard is in. Especially useful for multi-valued fields.'
 required: false
 translatable: false
 default_value: {  }

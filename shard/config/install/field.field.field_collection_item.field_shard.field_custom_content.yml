@@ -6,6 +6,8 @@ dependencies:
     - field_collection.field_collection.field_shard
   module:
     - text
+_core:
+  default_config_hash: y_gQi6rdMiAf0Ysi6S4j_XKOC7fzy5BbvncvkqCVsOQ
 id: field_collection_item.field_shard.field_custom_content
 field_name: field_custom_content
 entity_type: field_collection_item
