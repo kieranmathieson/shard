@@ -74,7 +74,7 @@ class ShardDomProcessorTest extends WebTestBase {
     $doc = $this->domProcessor->createDomDocumentFromHtml($html);
     $result = $doc->getElementsByTagName('body')->item(0)->C14N();
     $this->assertTrue(
-      $this->checkHtmlSame($html, $result),
+      TestUtilities::checkHtmlSame($html, $result),
       "createDomDocumentFromHtmlTest: Found the right HTML."
     );
   }
@@ -90,7 +90,7 @@ class ShardDomProcessorTest extends WebTestBase {
     $to = $doc->getElementsByTagName('div')->item(1);
     $this->domProcessor->duplicateElementAttributes($from, $to);
     //Check that the attributes are the same.
-    $this->assertTrue($this->checkAttributesAreSame($from, $to),
+    $this->assertTrue(TestUtilities::checkAttributesAreSame($from, $to),
       "duplicateAttributes: Attributes copied, as expected.");
   }
 
@@ -109,8 +109,8 @@ class ShardDomProcessorTest extends WebTestBase {
     /* @var \DOMElement $div */
     $div = $this->domProcessor->findElementWithLocalContent($body);
     $this->assertEqual(
-      $this->normalizeString($div->C14N()),
-      $this->normalizeString("<div class='local-content'>DOG</div>"),
+      TestUtilities::normalizeString($div->C14N()),
+      TestUtilities::normalizeString("<div class='local-content'>DOG</div>"),
       'findLocalContentTest:Found expected local content tag.');
 
 
@@ -150,7 +150,7 @@ class ShardDomProcessorTest extends WebTestBase {
     RUN!
   </p>
   <div data-sloth-id='314' data-view-mode='shard'>
-    <div data-thing='44'>Meow!</div><div class='local-content'>DOGZ!</div>
+    <div data-thing='44'>Meow!</div><div class='local-content'>DOGS!</div>
   </div>
 </body>
 ";
@@ -162,8 +162,8 @@ class ShardDomProcessorTest extends WebTestBase {
     //Test for a class that exists.
     $first = $this->domProcessor->findFirstElementWithAttribute($elements, 'data-thing', 44);
     $this->assertEqual(
-      $this->normalizeString($first->C14N()),
-      $this->normalizeString($expected),
+      TestUtilities::normalizeString($first->C14N()),
+      TestUtilities::normalizeString($expected),
       "findFirstWithAttribute: Found  element, simple test."
     );
 
@@ -191,8 +191,8 @@ class ShardDomProcessorTest extends WebTestBase {
     $first = $this->domProcessor->findFirstElementWithAttribute($elements,
       'data-best-animal', 'this-one');
     $this->assertEqual(
-      $this->normalizeString($first->C14N()),
-      $this->normalizeString($expected),
+      TestUtilities::normalizeString($first->C14N()),
+      TestUtilities::normalizeString($expected),
       "findFirstWithAttribute: Found element, nested."
     );
 
@@ -257,7 +257,7 @@ class ShardDomProcessorTest extends WebTestBase {
   }
 
   public function findFirstWithClassTest() {
-    $expected = "<div class='local-content'>DOGZ!</div>";
+    $expected = "<div class='local-content'>DOGS!</div>";
     $html = "
 <body>
   <p>
@@ -276,8 +276,8 @@ class ShardDomProcessorTest extends WebTestBase {
     //Test for a class that exists.
     $first = $this->domProcessor->findFirstElementWithClass($elements, 'local-content');
     $this->assertEqual(
-      $this->normalizeString($first->C14N()),
-      $this->normalizeString($expected),
+      TestUtilities::normalizeString($first->C14N()),
+      TestUtilities::normalizeString($expected),
       "findFirstWithClass: Found the right element, simple test."
     );
 
@@ -308,8 +308,8 @@ class ShardDomProcessorTest extends WebTestBase {
     //Test for a class that exists.
     $first = $this->domProcessor->findFirstElementWithClass($elements, 'local-content');
     $this->assertEqual(
-      $this->normalizeString($expected),
-      $this->normalizeString($first->C14N()),
+      TestUtilities::normalizeString($expected),
+      TestUtilities::normalizeString($first->C14N()),
       "findFirstWithClass: Found the right element, nested."
     );
   }
@@ -329,7 +329,7 @@ class ShardDomProcessorTest extends WebTestBase {
       </section>
     </div>
   </div>
-  <div data-shard-type='sloth' data-sloth-id='666' data-view-mode='Phent'>
+  <div data-shard-type='sloth' data-sloth-id='666' data-view-mode='strange'>
     <div>Meow!</div>
     <div class='now'>
       <p>Then!</p>
@@ -341,7 +341,7 @@ class ShardDomProcessorTest extends WebTestBase {
       </section>
     </div>
   </div>
-  <div data-shard-type='sloth' data-sloth-id='777' data-view-mode='grat' data-shard-processed='processed'>
+  <div data-shard-type='sloth' data-sloth-id='777' data-view-mode='grit' data-shard-processed='processed'>
     <div>Meow!</div>
     <div class='eventually'>
       <p>When?</p>
@@ -357,8 +357,8 @@ class ShardDomProcessorTest extends WebTestBase {
 ";
     $this->domProcessor->getMetadata()->setShardTypeNames(['sloth']);
     $doc = $this->domProcessor->createDomDocumentFromHtml($html);
-    $elements = $doc->getElementsByTagName('div');
-    $first = $this->domProcessor->findFirstUnprocessedShardTag($elements);
+    $body = $doc->getElementsByTagName('body')->item(0);
+    $first = $this->domProcessor->findFirstUnprocessedShardTag($body);
     $this->assertEqual($first->getAttribute('data-sloth-id'), 666,
       "findFirstUnprocessedShardTag: Found the right element."
     );
@@ -378,7 +378,7 @@ class ShardDomProcessorTest extends WebTestBase {
       </section>
     </div>
   </div>
-  <div data-shard-type='sloth' data-sloth-id='666' data-view-mode='Phent' data-shard-processed='processed'>
+  <div data-shard-type='sloth' data-sloth-id='666' data-view-mode='strange' data-shard-processed='processed'>
     <div>Meow!</div>
     <div class='now'>
       <p>Then!</p>
@@ -390,7 +390,7 @@ class ShardDomProcessorTest extends WebTestBase {
       </section>
     </div>
   </div>
-  <div data-shard-type='sloth' data-sloth-id='777' data-view-mode='grat' data-shard-processed='processed'>
+  <div data-shard-type='sloth' data-sloth-id='777' data-view-mode='grit' data-shard-processed='processed'>
     <div>Meow!</div>
     <div class='eventually'>
       <p>When?</p>
@@ -405,8 +405,8 @@ class ShardDomProcessorTest extends WebTestBase {
 </body>
 ";
     $doc = $this->domProcessor->createDomDocumentFromHtml($html);
-    $elements = $doc->getElementsByTagName('div');
-    $first = $this->domProcessor->findFirstUnprocessedShardTag($elements);
+    $body = $doc->getElementsByTagName('body')->item(0);
+    $first = $this->domProcessor->findFirstUnprocessedShardTag($body);
     $this->assertFalse($first,
       "findFirstUnprocessedShardTag: Nothing found, as expected."
     );
@@ -423,8 +423,8 @@ class ShardDomProcessorTest extends WebTestBase {
     /* @var \DOMElement $div */
     $div = $this->domProcessor->findLocalContentContainerInDoc($doc);
     $this->assertEqual(
-      $this->normalizeString($div->C14N()),
-      $this->normalizeString("<div class='local-content'>DOG</div>"),
+      TestUtilities::normalizeString($div->C14N()),
+      TestUtilities::normalizeString("<div class='local-content'>DOG</div>"),
       'findLocalContentContainerInDoc:Found expected local content tag.');
 
 
@@ -459,8 +459,8 @@ class ShardDomProcessorTest extends WebTestBase {
     $body = $doc->getElementsByTagName('section')->item(0);
     $result = $this->domProcessor->getElementInnerHtml($body);
     $this->assertEqual(
-      $this->normalizeString($innerHtml),
-      $this->normalizeString($result),
+      TestUtilities::normalizeString($innerHtml),
+      TestUtilities::normalizeString($result),
       'getInnerHtmlTest: got expected HTML.');
   }
 
@@ -474,8 +474,8 @@ class ShardDomProcessorTest extends WebTestBase {
     $body = $doc->getElementsByTagName('section')->item(0);
     $result = $this->domProcessor->getElementOuterHtml($body);
     $this->assertEqual(
-      $this->normalizeString($outerHtml),
-      $this->normalizeString($result),
+      TestUtilities::normalizeString($outerHtml),
+      TestUtilities::normalizeString($result),
       'getOuterHtmlTest: got expected HTML.');
   }
 
@@ -670,7 +670,7 @@ class ShardDomProcessorTest extends WebTestBase {
    </body>";
     $this->domProcessor->getMetadata()->setShardTypeNames(['llama', 'sloth']);
     $doc = $this->domProcessor->createDomDocumentFromHtml($html);
-    $div = $doc->getElementsByTagName('body')->item(0);
+    $div = $doc->getElementsByTagName('div')->item(0);
     $this->assertTrue(
       $this->domProcessor->isShardElementProcessed($div),
       'isShardElementProcessedTest: shard is processed, as expected.'
@@ -694,10 +694,34 @@ class ShardDomProcessorTest extends WebTestBase {
    </body>";
     $this->domProcessor->getMetadata()->setShardTypeNames(['llama', 'sloth']);
     $doc = $this->domProcessor->createDomDocumentFromHtml($html);
-    $div = $doc->getElementsByTagName('body')->item(0);
+    $div = $doc->getElementsByTagName('div')->item(0);
     $this->assertFalse(
       $this->domProcessor->isShardElementProcessed($div),
       'isShardElementProcessedTest: shard is not processed, as expected.'
+    );
+  }
+
+  public function loadDomDocumentFromHtmlTest() {
+    $html = "
+<body>
+  <p>
+    Sloths are coming!
+  </p>
+  <p>
+    RUN!
+  </p>
+  <div data-sloth-id='314' data-view-mode='shard'>
+    <div>Meow!</div>
+  </div>
+</body>
+";
+    $doc = new \DOMDocument();
+    $doc->preserveWhiteSpace = false;
+    $this->domProcessor->loadDomDocumentFromHtml($doc, $html);
+    $result = $doc->getElementsByTagName('body')->item(0)->C14N();
+    $this->assertTrue(
+      TestUtilities::checkHtmlSame($html, $result),
+      "loadDomDocumentFromHtmlTest: Found the right HTML."
     );
   }
 
@@ -720,7 +744,7 @@ class ShardDomProcessorTest extends WebTestBase {
     $this->domProcessor->getMetadata()->setShardTypeNames(['llama', 'sloth']);
     $doc = $this->domProcessor->createDomDocumentFromHtml($html);
     /* @var \DOMElement $div */
-    $div = $doc->getElementsByTagName('body')->item(0);
+    $div = $doc->getElementsByTagName('div')->item(0);
     $this->domProcessor->markShardAsProcessed($div);
     $this->assertEqual(
       $div->getAttribute('data-shard-processed'),
@@ -733,7 +757,7 @@ class ShardDomProcessorTest extends WebTestBase {
   public function removeElementChildrenTest() {
 
     $html = "
-<body><div data-thing='6'><p>I will <span>die</span></p><p>ARGH!</p></div></body>
+<body><div data-thing='6'><p>I will <span>die</span></p><p>BOO!</p></div></body>
 ";
     $doc = new \DOMDocument();
     $doc->preserveWhiteSpace = FALSE;
@@ -742,8 +766,8 @@ class ShardDomProcessorTest extends WebTestBase {
     $this->domProcessor->removeElementChildren($element);
     $expected = "<div data-thing='6'></div>";
     $this->assertEqual(
-      $this->normalizeString($expected),
-      $this->normalizeString($element->C14N()),
+      TestUtilities::normalizeString($expected),
+      TestUtilities::normalizeString($element->C14N()),
       'removeElementChildrenTest: The children were killed, as expected.'
     );
 
@@ -758,8 +782,8 @@ class ShardDomProcessorTest extends WebTestBase {
     $this->domProcessor->removeElementChildren($element);
     $expected = "<div data-thing='6'></div>";
     $this->assertEqual(
-      $this->normalizeString($expected),
-      $this->normalizeString($element->C14N()),
+      TestUtilities::normalizeString($expected),
+      TestUtilities::normalizeString($element->C14N()),
       'removeElementChildrenTest: No children to kill, as expected.'
     );
 
@@ -780,8 +804,8 @@ class ShardDomProcessorTest extends WebTestBase {
     $source = $doc->getElementsByTagName('div')->item(1);
     $this->domProcessor->replaceElementChildren($target, $source);
     $this->assertEqual(
-      $this->normalizeString($target->C14N()),
-      $this->normalizeString("<div class='r'>I will <span>die</span></div>"),
+      TestUtilities::normalizeString($target->C14N()),
+      TestUtilities::normalizeString("<div class='r'>I will <span>die</span></div>"),
       'replaceElementChildrenTest: Replaced element contents successful.'
     );
   }
@@ -797,8 +821,8 @@ class ShardDomProcessorTest extends WebTestBase {
     $with = $doc->getElementsByTagName('div')->item(1);
     $this->domProcessor->replaceElementContents($from, $with);
     $this->assertEqual(
-      $this->normalizeString($from->C14N()),
-      $this->normalizeString('<div>hund</div>'),
+      TestUtilities::normalizeString($from->C14N()),
+      TestUtilities::normalizeString('<div>hund</div>'),
       'replaceElementContentsTest: Replaced element contents successful.'
     );
   }
@@ -815,8 +839,8 @@ class ShardDomProcessorTest extends WebTestBase {
     $element = $doc->getElementsByTagName('div')->item(0);
     $this->domProcessor->stripElementAttributes($element);
     $this->assertEqual(
-      $this->normalizeString('<div>DOG</div>'),
-      $this->normalizeString($element->C14N()),
+      TestUtilities::normalizeString('<div>DOG</div>'),
+      TestUtilities::normalizeString($element->C14N()),
       "stripElementAttributesTest: The attributes were stripped, as expected.");
   }
 
@@ -826,87 +850,5 @@ class ShardDomProcessorTest extends WebTestBase {
 
 
 
-  /**************************************************************
-  ************           UTILITY METHODS     ********************
-  ***************************************************************/
-
-  /**
-   * Change string into a predictable format.
-   *
-   * @param $in
-   * @return mixed|string
-   */
-  protected function normalizeString($in) {
-    //" to '
-    $out = str_replace('"', "'", $in);
-    $out = str_replace("\n", '', $out);
-    $out = str_replace("\r", '', $out);
-    $out = str_replace(' ', '', $out);
-    $out = trim($out);
-    return $out;
-  }
-
-  /**
-   * Copy the attributes from one element to another.
-   *
-   * @param \DOMElement $element1
-   * @param \DOMElement $element2
-   * @return bool
-   * @internal param \DOMElement $from Copy attributes from this element...
-   * @internal param \DOMElement $to ...to this element.
-   */
-  protected function checkAttributesAreSame(\DOMElement $element1, \DOMElement $element2) {
-    if ($element1->attributes->length != $element2->attributes->length) {
-      return FALSE;
-    }
-    foreach ($element1->attributes as $attribute) {
-      $el1_attr = $element1->getAttribute($attribute->name);
-      $el2_attr = $element2->getAttribute($attribute->name);
-      if ($this->normalizeString($el1_attr) != $this->normalizeString($el2_attr)) {
-        return FALSE;
-      }
-    }
-    return TRUE;
-  }
-
-  protected function checkDomDocHtmlSame( \DOMDocument $dom_doc1, \DOMDocument $dom_doc2) {
-    $html1 = $this->normalizeString($dom_doc1->C14N());
-    $html2 = $this->normalizeString($dom_doc2->C14N());
-    return $html1 == $html2;
-  }
-
-  protected function checkHtmlSame( $html1, $html2 ) {
-    $dom_doc1 = new \DOMDocument();
-    $dom_doc1->preserveWhiteSpace = false;
-    $dom_doc1->loadHTML($html1);
-    $dom_doc2 = new \DOMDocument();
-    $dom_doc2->preserveWhiteSpace = false;
-    $dom_doc2->loadHTML($html2);
-    return $this->checkDomDocHtmlSame($dom_doc1, $dom_doc2);
-  }
-
-  public function loadDomDocumentFromHtmlTest() {
-    $html = "
-<body>
-  <p>
-    Sloths are coming!
-  </p>
-  <p>
-    RUN!
-  </p>
-  <div data-sloth-id='314' data-view-mode='shard'>
-    <div>Meow!</div>
-  </div>
-</body>
-";
-    $doc = new \DOMDocument();
-    $doc->preserveWhiteSpace = false;
-    $this->domProcessor->loadDomDocumentFromHtml($doc, $html);
-    $result = $doc->getElementsByTagName('body')->item(0)->C14N();
-    $this->assertTrue(
-      $this->checkHtmlSame($html, $result),
-      "loadDomDocumentFromHtmlTest: Found the right HTML."
-    );
-  }
 
 }

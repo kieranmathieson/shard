@@ -6,6 +6,7 @@
 
 namespace Drupal\shard;
 
+use Symfony\Component\DependencyInjection\ContainerInterface;
 
 class ShardUtilities {
 

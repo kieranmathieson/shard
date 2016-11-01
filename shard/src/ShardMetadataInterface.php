@@ -27,13 +27,13 @@ interface ShardMetadataInterface {
 
   //HTML tag used in the DB format of a tag to store the id of a collection
   //item entity for a shard.
-  const SHARD_ID_TAG = 'data-shard-id';
+  const SHARD_ID_ATTRIBUTE = 'data-shard-id';
 
   //HTML tag used in CKEditor format to show the nid of the guest node.
   const SHARD_GUEST_NID_TAG = 'data-guest-id';
 
   //HTML tag used in CKEditor format to show the view mode to use.
-  const SHARD_VIEW_FORMAT = 'data-view-mode';
+  const SHARD_VIEW_FORMAT_ATTRIBUTE = 'data-view-mode';
 
   //HTML attribute to identify whether shard tag has been processed.
   const SHARD_TAG_BEEN_PROCESSED_ATTRIBUTE = 'data-shard-processed';
@@ -55,6 +55,9 @@ interface ShardMetadataInterface {
   const FIELD_NAME_VIEW_MODE = 'field_view_mode';
   const FIELD_NAME_LOCATION = 'field_shard_location';
   const FIELD_NAME_LOCAL_CONTENT = 'field_custom_content';
+
+  //Class name for local content, for styling.
+  const SHARD_LOCAL_CONTENT_CLASS = 'local-content';
 
   /**
    * @return \string[]

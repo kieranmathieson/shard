@@ -165,12 +165,14 @@ class ShardDomProcessor {
 
 
   /**
-   * Return the first HTML shard tag that has not been processed.
+   * Return the first HTML child shard tag of an element
+   * that has not been processed.
    *
-   * @param \DOMNodeList $elements
+   * @param \DOMElement $parentElement
    * @return \DOMElement|false An element.
    */
-  public function findFirstUnprocessedShardTag(\DOMNodeList $elements) {
+  public function findFirstUnprocessedShardTag(\DOMElement $parentElement) {
+    $elements = $parentElement->getElementsByTagName('div');
     //For each element
     /* @var \DOMElement $element */
     foreach($elements as $element) {
@@ -207,9 +209,14 @@ class ShardDomProcessor {
         }
         //Test children.
         if ($element->hasChildNodes()) {
-          $result = $this->findFirstUnprocessedShardTag($element->childNodes);
-          if ($result) {
-            return $result;
+          $childElements = $element->getElementsByTagName('div');
+          //For each element
+          /* @var \DOMElement $element */
+          foreach($childElements as $childElement) {
+            $result = $this->findFirstUnprocessedShardTag($childElement);
+            if ($result) {
+              return $result;
+            }
           }
         }
       }
@@ -347,8 +354,7 @@ class ShardDomProcessor {
    * intact.
    *
    * @param \DOMElement $element Element to rebuild.
-   * @param \DOMElement $replacement Element to rebuild from. Assume it is
-   *  wrapped in a body tag.
+   * @param \DOMElement $replacement Element to rebuild from.
    */
   public function replaceElementContents(
     \DOMElement $element,

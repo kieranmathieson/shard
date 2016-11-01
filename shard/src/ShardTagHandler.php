@@ -8,6 +8,7 @@
 
 namespace Drupal\shard;
 
+use Drupal\Component\Uuid\Uuid;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 //use Drupal\shard\Exceptions\ShardBadDataTypeException;
 use Drupal\shard\Exceptions\ShardException;
@@ -23,6 +24,8 @@ use Drupal\Core\Entity\EntityDisplayRepositoryInterface;
 use Drupal\Core\Render\RendererInterface;
 use Drupal\Core\Database\Connection;
 use Drupal\Component\EventDispatcher\ContainerAwareEventDispatcher;
+use Drupal\Component\Uuid\Php;
+use Drupal\node\NodeInterface;
 
 
 class ShardTagHandler {
@@ -86,6 +89,13 @@ class ShardTagHandler {
   protected $eventDispatcher;
 
   /**
+   * Service to generate UUIDs.
+   *
+   * @var \Drupal\Component\Uuid\Php;
+   */
+  protected $uuidService;
+
+  /**
    * ShardTagHandler constructor.
    *
    * Load shard configuration data set by admin.
@@ -107,7 +117,8 @@ class ShardTagHandler {
                        QueryFactory $entity_query,
                        RendererInterface $renderer,
                        Connection $database_connection,
-                       ContainerAwareEventDispatcher $eventDispatcher) {
+                       ContainerAwareEventDispatcher $eventDispatcher,
+                       \Drupal\Component\Uuid\Php $uuidService) {
     $this->metadata = $metadata;
     $this->domProcessor = $domProcessor;
     $this->entityTypeManager = $entity_type_manager;
@@ -116,6 +127,7 @@ class ShardTagHandler {
     $this->renderer = $renderer;
     $this->databaseConnection = $database_connection;
     $this->eventDispatcher = $eventDispatcher;
+    $this->uuidService = $uuidService;
     //Create a logger.
     $this->logger = \Drupal::logger('shard');
   }
@@ -133,7 +145,8 @@ class ShardTagHandler {
       $container->get('entity.query'),
       $container->get('renderer'),
       $container->get('database'),
-      $container->get('event-dispatcher')
+      $container->get('event-dispatcher'),
+      $container->get('uuid')
     );
   }
 
@@ -141,181 +154,188 @@ class ShardTagHandler {
    * Convert shard tags from their CKEditor version to their DB storage
    * version for all eligible fields in $entity.
    *
-   * @param \Drupal\Core\Entity\EntityInterface $entity
+   * @param \Drupal\Core\Entity\EntityInterface|\Drupal\node\NodeInterface $hostNode
+   * @return ShardTagModel[] For new host nodes, shard collection items
+   * that need to be created once the host node's nid is known.
    */
-  public function entityCkTagsToDbTags(EntityInterface $entity) {
-    if ( ! $entity->isNew() ) {
+  public function entityCkTagsToDbTags(EntityInterface $hostNode) {
+    $newShardCollectionItems = [];
+    if ( ! $hostNode->isNew() ) {
+      //This is an existing node, with an nid.
       //Get the nid of the node containing the references.
-      $host_nid = $entity->id();
+      $hostNid = $hostNode->id();
+      //Get the ids of shard collection items that refer to the host node.
+      //They'll be erased later.
+      $oldShards = $this->getShardItemsForHostNode($hostNid);
     }
     else {
       //Use a temporary fake nid. It will be replaced when the real nid is
       //available.
-      $host_nid = $this->computeTempNid();
-      //Save it for hook_node_insert().
-      $_REQUEST['temp_nid'] = $host_nid;
+      $uuid = new Php();
+      $hostNid = $uuid->generate();
     }
-    $this->shardInsertionDetails->setHostNid($host_nid);
     //Get the names of the fields that are eligible for shards.
-    $eligible_fields = $this->eligibleFields->listEntityEligibleFields($entity);
-    foreach($eligible_fields as $field_name) {
+    $eligibleFields = $this->metadata->listEligibleFieldsForNode($hostNode);
+    foreach($eligibleFields as $fieldName) {
       try {
-        $this->shardInsertionDetails->setFieldName($field_name);
-        if ( ! $entity->isNew() ) {
-          //Erase all shard references to the old version this field. Rebuild them later.
-          $this->eraseShardRecordsForField($entity, $field_name);
-        }
         //Loop over each value for this field (could be multivalued).
-        $field_values = $entity->{$field_name}->getValue();
-        for ($delta = 0; $delta < sizeof($field_values); $delta++) {
-          $this->shardInsertionDetails->setDelta($delta);
+        $fieldValues = $hostNode->{$fieldName}->getValue();
+        for ($delta = 0; $delta < sizeof($fieldValues); $delta++) {
           //Translate the HTML.
-          //This will also update the field collection in the shards nodes
-          //to show the shards' use in the host nodes.
-          $this->shardInsertionDetails->setCkHtml(
-            $entity->{$field_name}[$delta]->value
+          //This will also update the field collection in the shards' nodes
+          //to show the shards' insertion into the host nodes.
+          //For existing host nodes, the data will be saved during
+          //this process.
+          //For new nodes, the data on field collections will be stored,
+          //and used later once the nid of the host is known. That data
+          //is stored in $newShardCollectionItems.
+          $hostNode->{$fieldName}[$delta]->value = $this->ckHtmlToDbHtml(
+            $hostNode->{$fieldName}[$delta]->value, //The HTML to process.
+            $newShardCollectionItems, //Shard collection item data.
+            $hostNid,
+            $fieldName,
+            $delta
           );
-          $this->ckHtmlToDbHtml();
-          //Save the new HTML into the entity.
-          $entity->{$field_name}[$delta]->value
-            = $this->shardInsertionDetails->getDbHtml();
         } //End foreach value of the field
       } catch (ShardException $e) {
         $message = t(
           'Problem detected during shard processing for the field %field. '
-          . 'It has been recorded in the log. Deets:', ['%field' => $field_name])
+          . 'It has been recorded in the log. Deets:', ['%field' => $fieldName])
           . '<br><br>' . $e->getMessage();
         drupal_set_message($message, 'error');
         \Drupal::logger('shards')->error($message);
       }
     } // End for each eligible field.
+    return $newShardCollectionItems;
   }
 
-  public function replaceTempNid(EntityInterface $entity) {
-    //Get the nid used, and the one to replace it with.
-    $real_nid = $entity->id();
-    $temp_nid = $_REQUEST['temp_nid'];
-    //Get all the field collection items that reference the temp nid.
+  /**
+   * Get the ids of the shard collection items that refer to a host nid.
+   *
+   * @param int $hostNid Host nid to look for.
+   * @return int[] Ids.
+   */
+  protected function getShardItemsForHostNode($hostNid){
     $query = $this->entityQuery->get('field_collection_item')
-      ->condition('field_name', 'field_shard')
-      ->condition('field_host_node', $temp_nid);
+      ->condition('field_host_node', $hostNid);
     $result = $query->execute();
-    $nodes = $this->$this->nodeStorage->loadMultiple($result);
-    foreach($nodes as $node) {
-      $node->field_host_node->value = $real_nid;
-      $node->save();
-    }
+    return $result;
   }
+
+
+
+
+//  public function replaceTempNid(EntityInterface $entity) {
+//    //Get the nid used, and the one to replace it with.
+//    $real_nid = $entity->id();
+//    $temp_nid = $_REQUEST['temp_nid'];
+//    //Get all the field collection items that reference the temp nid.
+//    $query = $this->entityQuery->get('field_collection_item')
+//      ->condition('field_name', 'field_shard')
+//      ->condition('field_host_node', $temp_nid);
+//    $result = $query->execute();
+//    $nodes = $this->$this->nodeStorage->loadMultiple($result);
+//    foreach($nodes as $node) {
+//      $node->field_host_node->value = $real_nid;
+//      $node->save();
+//    }
+//  }
 
   /**
    * Convert the shard tags in some HTML code from CKEditor
    * format to DB format.
    *
    * @param string $ckHtml HTML to convert.
-   * @return string Result.
+   * @param ShardTagModel[] $newShardCollectionItems Deets for shard collection
+   *        items for a new host node, to be saved once the host node's nid
+   *        is known.
+   * @param int|string $hostNid Either a nid (existing host nodes) or
+   *        a UUID (new nodes).
+   * @param string $fieldName Name of the field being processed.
+   * @param int $delta Which value of the field?
+   * @return string Converted HTML.
    */
-  protected function ckHtmlToDbHtml($ckHtml) {
+  protected function ckHtmlToDbHtml($ckHtml, $newShardCollectionItems,
+                                    $hostNid, $fieldName, $delta) {
     //Wrap content in a unique tag.
-    $ckHtml = '<body>' . $ckHtml . '</body>';
+    $uuidMaker = new Php();
+    $outerWrapperTagId = $uuidMaker->generate();
+    $ckHtml = "<div id='$outerWrapperTagId'>$ckHtml</div>";
+    //Create a DOM document from the HTML. PHP's DOM processor likes to work
+    //with one DOM document when messing with HTML. Otherwise, you need
+    //to import elements across documents.
     $domDocument = $this->domProcessor->createDomDocumentFromHtml($ckHtml);
-    //Work through all of the defined sharders.
-    foreach($this->metadata->getShardTypeNames() as $shardTypeName) {
-      /* Tags of the most inner shards should be collapsed to
-       * DB format first. E.g., for:
-       *
-       * BODY-----T1
-       *    |
-       *    T2-----T3
-       *    |
-       *    T4-----T5
-       *    |      |
-       *    |      T6
-       *    |
-       *    T7
-       *
-       * T3 should be processed before T2. T5 and T6 before T4.
-       */
-      //Create a tree for the shard tags in the HTML.
-      $shardTree = new ShardTagModel(
-        $domDocument->getElementsByTagName('body')->item(0)
-      );
-      //Depth first processing of the tree. Process the child elements first.
-
-
-
-
-
-
-
-
-      //Process the first shard tag found. Will recurse while there are more.
-      //Doing one at a time allows for tag nesting.
-      //The called function also adds a shard field collection item to the shard
-      //node referred to by a shard tag in the HTML.
-      $this->ckHtmlToDbHtmlProcessOneTag($domDocument, $shardTypeName);
-    }
+    $wrapperDiv = $domDocument->getElementById($outerWrapperTagId);
+    //Process the first shard tag found in an element.
+    //Will recurse while there are more.
+    $this->ckHtmlToDbHtmlProcessOneTag(
+      $wrapperDiv, $newShardCollectionItems,
+      $domDocument, $hostNid, $fieldName, $delta);
     //Get the new content.
-    $body = $domDocument->getElementsByTagName('body')->item(0);
-    $dbHtml = $domDocument->saveHTML( $body );
-    //Strip the body tag.
-    preg_match("/\<body\>(.*)\<\/body\>/msi", $dbHtml, $matches);
+    $result = $domDocument->getElementById($outerWrapperTagId);
+    $dbHtml = $domDocument->saveHTML( $result );
+    //Strip the wrapper tag.
+    preg_match('/' . preg_quote("<div id='$outerWrapperTagId'>")
+      . '(.*)\<\/div\>/msi', $dbHtml, $matches);
     $dbHtml = $matches[1];
     return $dbHtml;
-  }
-
-  protected function ckHtmlToDbHtmlProcessChildren(ShardTagModel $shardTagModel) {
-    foreach( $shardTagModel->getChildTagModels() as $childTagModel ) {
-      $this->ckHtmlToDbHtmlProcessChildren($childTagModel);
-    }
-
   }
 
   /**
    * Process the first shard insertion tag in CKEditor format in some
    * HTML. Call recursively until there are no more left.
    *
+   * @param \DOMElement $elementToProcess
+   * @param ShardTagModel[] $newShardCollectionItems Deets for shard collection
+   *        items for a new host node, to be saved once the host node's nid
+   *        is known.
    * @param \DOMDocument $domDocument
-   * @param $shardTypeName
-   * @internal param \DOMDocument $domDoc
+   * @param $hostNid
+   * @param $fieldName
+   * @param $delta
    */
-  protected function ckHtmlToDbHtmlProcessOneTag(\DOMDocument $domDocument, $shardTypeName ) {
-    /* @var \DOMNodeList $divs */
-    $divs = $domDocument->getElementsByTagName('div');
+  protected function ckHtmlToDbHtmlProcessOneTag(
+      \DOMElement $elementToProcess,
+      &$newShardCollectionItems,
+      \DOMDocument $domDocument,
+      $hostNid, $fieldName, $delta) {
+    //Find the first unprocessed child shard tag
     /* @var \DOMElement $first */
-    $first = $this->domProcessor->findFirstUnprocessedShardTag($divs, $shardTypeName);
+    $first = $this->domProcessor->findFirstUnprocessedShardTag($elementToProcess);
     if ($first) {
-      //Extract data about the shard to insert, add to the object used
-      //to collect data about the current insertion.
-      $this->cacheTagDetails($first);
-      //Create shard field collection record, and add it to the
-      //shard's shard field on the shard's node.
-      // Get back the item_id of the record.
-      //item_id is the PK of the field_collection entity.
-      $item_id = $this->addShardToShard();
+      //Create a data model of the tag.
+      $shardTagModel = $this->createShardTagModelFromCkFormat(
+        $first, $hostNid, $fieldName, $delta);
+      if ( is_numeric($hostNid) ) {
+        //This is an existing host node, with a known nid.
+        //Shard collection item read to save.
+        //Get back the id of the entity, that is,
+        //the PK of the field_collection entity.
+        $itemId = $this->saveShardCollectionItem($shardTagModel);
+        $shardTagModel->setShardId($itemId);
+      }
+      else {
+        //New host node, so its nid is not known.
+        //Keep the new tag model for processing later.
+        $uuid = new Php();
+        $shardTagModel->setShardId( $uuid->generate() );
+        $newShardCollectionItems[] = $shardTagModel;
+      }
       //Rebuild the tag with the DB shard format.
       //Remove existing attributes.
       $this->domProcessor->stripElementAttributes( $first );
       //Add right attributes.
-      $first->setAttribute(ShardMetadata::SHARD_TYPE_TAG, 'shard');
-//      $first->setAttribute(
-//        'data-shard-id',
-//        $this->shardInsertionDetails->getShardNid()
-//      );
       $first->setAttribute(
-        'data-shard-id',
-        $item_id
-      );
+        ShardMetadata::SHARD_TYPE_TAG, $shardTagModel->getShardType());
+      $first->setAttribute(
+        ShardMetadata::SHARD_ID_ATTRIBUTE, $shardTagModel->getGuestNid());
       //Kill HTML in node.
       $this->domProcessor->removeElementChildren($first);
-      //Add local content, if any.
-      if ($this->shardInsertionDetails->getLocalContent()) {
-        $this->insertLocalContentDb(
-          $first,
-          $this->shardInsertionDetails->getLocalContent()
-        );
-      }
+      //Add local content.
+      $this->insertLocalContentDb($first, $shardTagModel->getLocalContent());
       //Process next tag.
-      $this->ckHtmlToDbHtmlProcessOneTag($domDocument);
+      $this->ckHtmlToDbHtmlProcessOneTag($first, $newShardCollectionItems,
+        $domDocument, $hostNid, $fieldName, $delta);
     } // End if found a shard to process.
   }
 
@@ -451,13 +471,12 @@ class ShardTagHandler {
     if ( $local_content ) {
       //Make the local content wrapper that shards expect.
       $local_content_wrapper = $element->ownerDocument->createElement('div');
-      $local_content_wrapper->setAttribute('class', 'local-content');
+      $local_content_wrapper->setAttribute(
+        'class', ShardMetadata::SHARD_LOCAL_CONTENT_CLASS);
       //Parse the content to add inside the wrapper.
       //Add a temp wrapper to make the local content easier to find (see below).
       $local_content = '<div id="local_content_wrapper_of_shards">' . $local_content . '</div>';
-      $doc = new \DOMDocument();
-      $doc->preserveWhiteSpace = false;
-      $this->domProcessor->loadDomDocumentElementHtml($doc, $local_content);
+      $doc = $this->domProcessor->createDomDocumentFromHtml($local_content);
       $temp_wrapper = $doc->getElementById('local_content_wrapper_of_shards');
       //Append all the children of the local content to the wrapper element.
       foreach( $temp_wrapper->childNodes as $child_node ) {
@@ -578,11 +597,45 @@ class ShardTagHandler {
   }
 
   /**
-   * Add a record to the shard field of shard, recording the insertion.
-   * @return int Item id of the new record.
+   * Create a shard tag model from a tag in CKEditor format.
+   * @param \DOMElement $element Element to be modelled.
+   * @param int|string $hostNid Host nid for existing nodes, UUID for new one.
+   * @param string $fieldName Name of the field being processed.
+   * @param int $delta Delta of the field being processed.
+   * @return ShardTagModel Model of the tag.
    * @throws \Drupal\shard\Exceptions\ShardMissingDataException
    */
-  protected function addShardToShard() {
+  protected function createShardTagModelFromCkFormat(
+    $element, $hostNid, $fieldName, $delta) {
+    $shardType = $this->domProcessor->getRequiredElementAttribute(
+      $element, ShardMetadata::SHARD_TYPE_TAG);
+    $viewMode = $this->domProcessor->getRequiredElementAttribute(
+      $element, ShardMetadata::SHARD_VIEW_FORMAT_ATTRIBUTE);
+    $location = $element->getLineNo();
+    $localContentElement
+      = $this->domProcessor->findElementWithLocalContent($element);
+    $localContent = $this->domProcessor->getElementInnerHtml($localContentElement);
+    $shardTagModel = new ShardTagModel();
+    $shardTagModel
+      ->setHostNid($hostNid)
+      ->setHostFieldName($fieldName)
+      ->setDelta($delta)
+      ->setShardType($shardType)
+      ->setViewMode($viewMode)
+      ->setLocation($location)
+      ->setLocalContent($localContent);
+    return $shardTagModel;
+  }
+
+  /**
+   * Save a shard tag model to storage.
+   *
+   * @param ShardTagModel $shardTagModel The model.
+   * @return int Saved Collection item's entity id.
+   * @throws \Drupal\shard\Exceptions\ShardMissingDataException
+   */
+  function saveShardCollectionItem($shardTagModel) {
+
     $shard = $this->entityTypeManager->getStorage('node')->load(
       $this->shardInsertionDetails->getShardNid()
     );
@@ -672,17 +725,19 @@ class ShardTagHandler {
    * @return string
    */
   public function dbHtmlToViewHtml($dbHtml) {
-    //Wrap content in a unique tag.
-    $dbHtml = '<body>' . $dbHtml . '</body>';
+    $outerWrapperTagId = $this->uuidService->generate();
+    $dbHtml = "<div id='$outerWrapperTagId'>$dbHtml</div>";
+    //Create a DOM document from the HTML.
     $domDocument = $this->domProcessor->createDomDocumentFromHtml($dbHtml);
+    $wrapperDiv = $domDocument->getElementById($outerWrapperTagId);
     //Process the first shard tag found. Recurse while there are more.
-    //Doing one at a time allows for tag nesting.
-    $this->dbHtmlToViewHtmlProcessOneTag($domDocument);
+    $this->dbHtmlToViewHtmlProcessOneTag($wrapperDiv);
     //Get the new content.
-    $body = $domDocument->getElementsByTagName('body')->item(0);
-    $viewHtml = $domDocument->saveHTML( $body );
-    //Strip the body tag.
-    preg_match("/\<body\>(.*)\<\/body\>/msi", $viewHtml, $matches);
+    $result = $domDocument->getElementById($outerWrapperTagId);
+    $viewHtml = $domDocument->saveHTML($result);
+    //Strip the wrapper tag.
+    preg_match('/' . preg_quote("<div id='$outerWrapperTagId'>")
+      . '(.*)\<\/div\>/msi', $viewHtml, $matches);
     $viewHtml = $matches[1];
     return $viewHtml;
   }
@@ -690,21 +745,19 @@ class ShardTagHandler {
   /**
    * Convert one shard tag from DB to view format.
    *
-   * @param \DOMDocument $domDocument The document with the tag.
+   * @param \DOMElement $parentElement The container element with the tag.
    */
-  public function dbHtmlToViewHtmlProcessOneTag(\DOMDocument $domDocument) {
-    /* @var \DOMNodeList $divs */
-    $divs = $domDocument->getElementsByTagName('div');
+  public function dbHtmlToViewHtmlProcessOneTag(\DOMElement $parentElement) {
     /* @var \DOMElement $first */
-    $first = $this->domProcessor->findFirstUnprocessedShardTag($divs);
+    $first = $this->domProcessor->findFirstUnprocessedShardTag($parentElement);
     if ($first) {
 //      //Trigger event.
 //      $event = new ShardTranslationEvent();
       //Get the id of the shard. This is the id of a field_collection_item entity.
       $shardId = $this->domProcessor->getRequiredElementAttribute(
-        $first, ShardMetadata::SHARD_ID_TAG);
-      //Load the shard.
-      $shard = new Shard(
+        $first, ShardMetadata::SHARD_ID_ATTRIBUTE);
+      //Create an object to model the shard.
+      $shard = new ShardTagModel(
         \Drupal::service('database'),
         \Drupal::service('shard.metadata'),
         \Drupal::service('entity_type.manager'),
@@ -712,66 +765,15 @@ class ShardTagHandler {
         \Drupal::service('shard.dom_processor')
       );
       $shard->setShardId($shardId);
-      $shard->loadShardCollectionItemFromStorage();
-      //Make the HTML element to show the embed.
-      $embeddingElement = $shard->createShardEmbeddingElement();
-//      //Load the node to be embedded.
-//      $guestNode = $shard->loadGuestNodeFromStorage();
-//      //Render the selected display of the shard.
-//      $viewBuilder = $this->entityTypeManager->getViewBuilder('node');
-//      $viewMode = $shard->getViewMode();
-//      $renderArray = $viewBuilder->view($guestNode, $viewMode);
-//      $viewHtml = (string)$this->renderer->renderRoot($renderArray);
-//      //DOMify it.
-//      //Wrap in a body tag to mke processing easier.
-//      $viewDocument = $this->domProcessor->createDomDocumentFromHtml('<body>' . $viewHtml . '</body>');
-//      //Get local content.
-//      $localContent = $shard->getLocalContent();
-//      //Add local content, if any, to the rendered display. The rendered view
-//      // mode must have a div with the class local-content.
-//      if ($localContent) {
-//        $this->insertLocalContentIntoViewHtml( $viewDocument, $localContent );
-//      }
-      //Insert the generated element into the shard's wrapper tag.
-      $this->domProcessor->replaceElementContents($first, $embeddingElement);
+      $shard->loadShardCollectionItemFromStorage($shardId);
+      //Inject the HTML element to show the embed.
+      $shard->injectGuestViewHtmlIntoShardTag($first);
       //Done with this tag. Mark it as processed.
       $this->domProcessor->markShardAsProcessed($first);
       //Process next tag.
-      $this->dbHtmlToViewHtmlProcessOneTag($domDocument);
+      $this->dbHtmlToViewHtmlProcessOneTag($parentElement);
     } // End if found a shard to process.
   }
-
-//  /**
-//   * Return first element with a given value for a given attribute.
-//   * @param \DOMNodeList $elements
-//   * @param string $attribute Attribute to check.
-//   * @param string $value Value to check for.
-//   * @return \DOMElement|false An element.
-//   */
-//  protected function findFirstWithAttribute(\DOMNodeList $elements, $attribute, $value) {
-//    //For each element
-//    /* @var \DOMElement $element */
-//    foreach($elements as $element) {
-//      //Is it an element?
-//      if (get_class($element) == 'DOMElement') {
-//        //Does it have the attribute and value?
-//        if ($element->hasAttribute($attribute)) {
-//          if ($element->getAttribute($attribute) == $value) {
-//            //Yes - return the element.
-//            return $element;
-//          }
-//        }
-//        //Test children.
-//        if ($element->hasChildNodes()) {
-//          $result = $this->findFirstWithAttribute($element->childNodes, $attribute, $value);
-//          if ($result) {
-//            return $result;
-//          }
-//        }
-//      }
-//    }
-//    return false;
-//  }
 
   /**
    * Return first shard element that has not been processed yet.
@@ -989,20 +991,22 @@ class ShardTagHandler {
    */
   public function dbHtmlToCkHtml($dbHtml) {
     //Wrap content in a unique tag.
-    $dbHtml = '<body>' . $dbHtml . '</body>';
-    //Put it in a DOMDocument.
+    $uuidMaker = new Php();
+    $outerWrapperTagId = $uuidMaker->generate();
+    $dbHtml = "<div id='$outerWrapperTagId'>$dbHtml</div>";
+    //Create a DOM document from the HTML. PHP's DOM processor likes to work
+    //with one DOM document when messing with HTML. Otherwise, you need
+    //to import elements across documents.
     $domDocument = $this->domProcessor->createDomDocumentFromHtml($dbHtml);
-    //Work through all of the defined sharders.
-    foreach($this->metadata->getShardTypeNames() as $shardTypeName) {
-      //Process the first shard tag found. Recurse while there are more.
-      //Doing one at a time allows for tag nesting.
-      $this->dbHtmlToCkHtmlProcessOneTag($domDocument, $shardTypeName);
-    }
+    $wrapperDiv = $domDocument->getElementById($outerWrapperTagId);
+    //Process the first shard tag found. Recurse while there are more.
+    $this->dbHtmlToCkHtmlProcessOneTag($wrapperDiv);
     //Get the new content.
-    $body = $domDocument->getElementsByTagName('body')->item(0);
-    $ckHtml = $domDocument->saveHTML( $body );
-    //Strip the body tag.
-    preg_match("/\<body\>(.*)\<\/body\>/msi", $ckHtml, $matches);
+    $result = $domDocument->getElementById($outerWrapperTagId);
+    $ckHtml = $domDocument->saveHTML( $result );
+    //Strip the wrapper tag.
+    preg_match('/' . preg_quote("<div id='$outerWrapperTagId'>")
+      . '(.*)\<\/div\>/msi', $ckHtml, $matches);
     $ckHtml = $matches[1];
     return $ckHtml;
   }
@@ -1010,38 +1014,50 @@ class ShardTagHandler {
   /**
    * Convert one shard tag from DB to CKEditor format.
    *
-   * @param \DOMDocument $domDocument The document with the tag.
+   * @param \DOMElement $parentElement The container..
    * @param string $shardTypeName Shard type to process.
    * @throws \Drupal\shard\Exceptions\ShardNotFoundException
    * @throws \Drupal\shard\Exceptions\ShardUnexptectedValueException
    */
-  public function dbHtmlToCkHtmlProcessOneTag(\DOMDocument $domDocument, $shardTypeName ) {
-    /* @var \DOMNodeList $divs */
-    $divs = $domDocument->getElementsByTagName('div');
+  public function dbHtmlToCkHtmlProcessOneTag(\DOMElement $parentElement) {
     //Is there are shard tag in the document.
     /* @var \DOMElement $first */
-    $first = $this->domProcessor->findFirstUnprocessedShardTag($divs, $shardTypeName);
+    $first = $this->domProcessor->findFirstUnprocessedShardTag($parentElement);
     if ($first) {
       $shardId = $this->domProcessor->getRequiredElementAttribute(
-        $first, ShardMetadata::SHARD_ID_TAG);
+        $first, ShardMetadata::SHARD_ID_ATTRIBUTE);
+      $shardType = $this->domProcessor->getRequiredElementAttribute(
+        $first, ShardMetadata::SHARD_TYPE_TAG);
       //Load the shard.
-      $shard = new Shard(
+      $shard = new ShardTagModel(
         \Drupal::service('database'),
         \Drupal::service('shard.metadata'),
         \Drupal::service('entity_type.manager'),
         \Drupal::service('renderer'),
         \Drupal::service('shard.dom_processor')
       );
-      $shard->setShardId($shardId);
-      $shard->loadShardCollectionItemFromStorage();
+      $shard->loadShardCollectionItemFromStorage($shardId);
+      //Change tag attributes, from DB to CK format.
+      $shard->setShardType($shardType);
       //Add the guest nid to the element for CK.
       $first->setAttribute(ShardMetadata::SHARD_GUEST_NID_TAG, $shard->getGuestNid());
       //Add the view mode to the element for CK.
       $viewMode = $shard->getViewMode();
-      $first->setAttribute(ShardMetadata::SHARD_VIEW_FORMAT, $viewMode);
+      $first->setAttribute(ShardMetadata::SHARD_VIEW_FORMAT_ATTRIBUTE, $viewMode);
       //Add the class that the widget uses to see that an element is a widget.
       $first->setAttribute('class',
-        str_replace('[type]', $shardTypeName, ShardMetadata::CLASS_IDENTIFYING_WIDGET));
+        str_replace('[type]', $shard->getShardType(), ShardMetadata::CLASS_IDENTIFYING_WIDGET));
+      //Remove the shard id. Not part of the CK format.
+      $first->removeAttribute(ShardMetadata::SHARD_ID_ATTRIBUTE);
+      //Now insert the content of the shard element being processed.
+
+
+
+      //Add local content.
+      if ($localContent) {
+        $this->insertLocalContentIntoViewHtml( $viewDocument, $localContent );
+      }
+
       //Make the HTML element to show the embed.
       $embeddingElement = $shard->createShardEmbeddingElement();
       //Insert the HTML into the wrapper tag.
@@ -1075,7 +1091,7 @@ class ShardTagHandler {
 //      );
       //Done with this tag.
       //Process next tag.
-      $this->dbHtmlToCkHtmlProcessOneTag($domDocument, $shardTypeName);
+      $this->dbHtmlToCkHtmlProcessOneTag($parentElement);
     } // End if found a shard to process.
   }
 

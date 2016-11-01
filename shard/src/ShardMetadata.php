@@ -9,14 +9,14 @@
 namespace Drupal\shard;
 
 use Drupal\Core\Entity\EntityDisplayRepositoryInterface;
-use Drupal\Core\Entity\Query\QueryFactory;
+use Drupal\Core\Entity\Query\QueryFactoryInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Drupal\Core\Entity\EntityTypeBundleInfoInterface;
 use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\Entity\EntityFieldManagerInterface;
 use Drupal\node\NodeInterface;
 use Drupal\Component\EventDispatcher\ContainerAwareEventDispatcher;
-use Symfony\Component\EventDispatcher\EventDispatcher;
+use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 
 use Drupal\Component\Uuid\Uuid;
 
@@ -105,14 +105,14 @@ class ShardMetadata implements ShardMetadataInterface {
   /**
    * Entity query object.
    *
-   * @var \Drupal\Core\Entity\Query\QueryFactory
+   * @var \Drupal\Core\Entity\Query\QueryFactoryInterface
    */
   protected $entityQuery;
 
   /**
    * Used to interact with sharders (modules that implement shards).
    *
-   * @var EventDispatcher
+   * @var EventDispatcherInterface
    */
   protected $eventDispatcher;
 
@@ -128,11 +128,11 @@ class ShardMetadata implements ShardMetadataInterface {
 
   public function __construct(
       EntityDisplayRepositoryInterface $entity_display_repository,
-      QueryFactory $entity_query,
+      QueryFactoryInterface $entity_query,
       EntityTypeBundleInfoInterface $bundle_info_manager,
       ConfigFactoryInterface $config_factory,
       EntityFieldManagerInterface $entity_field_manager,
-      ContainerAwareEventDispatcher $eventDispatcher
+      EventDispatcherInterface $eventDispatcher
       ) {
     $this->entityDisplayRepository = $entity_display_repository;
     $this->entityQuery = $entity_query;

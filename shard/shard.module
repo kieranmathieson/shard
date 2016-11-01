@@ -177,6 +177,9 @@ function shard_remove_shards_on_delete($form, &$form_state) {
  * @param NodeInterface $node
  */
 function shard_node_presave(NodeInterface $node) {
+  if ( array_key_exists('simpletest.settings', $GLOBALS['conf']) ) {
+    return;
+  }
   $container = \Drupal::getContainer();
   /* @var \Drupal\shard\ShardMetadataInterface $metadata */
   $metadata = $container->get('shard.metadata');
