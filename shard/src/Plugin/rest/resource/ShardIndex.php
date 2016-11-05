@@ -9,7 +9,7 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 use Psr\Log\LoggerInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
-use Drupal\Core\Entity\Query\QueryFactory;
+use Drupal\Core\Entity\Query\QueryFactoryInterface;
 
 /**
  * Provides a REST resource to get a list of shards.
@@ -53,7 +53,7 @@ class ShardIndex extends ResourceBase {
    * @param \Drupal\Core\Session\AccountProxyInterface $current_user
    *   A current user instance.
    * @param \Drupal\Core\Entity\EntityTypeManagerInterface $type_manager
-   * @param \Drupal\Core\Entity\Query\QueryFactory $entity_query
+   * @param \Drupal\Core\Entity\Query\QueryFactoryInterface $entity_query
    */
   public function __construct(
     array $configuration,
@@ -63,7 +63,7 @@ class ShardIndex extends ResourceBase {
     LoggerInterface $logger,
     AccountProxyInterface $current_user,
     EntityTypeManagerInterface $type_manager,
-    QueryFactory $entity_query
+    QueryFactoryInterface $entity_query
 ) {
     parent::__construct($configuration, $plugin_id, $plugin_definition,
       $serializer_formats, $logger);

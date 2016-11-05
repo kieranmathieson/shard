@@ -14,6 +14,8 @@ use Drupal\Core\Entity\Query\QueryFactoryInterface;
 
 class MockQueryFactory implements QueryFactoryInterface {
 
+  protected $operation;
+
   /**
    * Instantiates an entity query for a given entity type.
    *
@@ -26,7 +28,11 @@ class MockQueryFactory implements QueryFactoryInterface {
    *   An entity query for a specific configuration entity type.
    */
   public function get(EntityTypeInterface $entity_type, $conjunction) {
-    // TODO: Implement get() method.
+//    if ( $entity_type == 'metadata test valid nid' ) {
+//      $query = new MockQuery();
+//      $query->operation = 'metadata test valid nid';
+//      return $query;
+//    }
   }
 
   /**

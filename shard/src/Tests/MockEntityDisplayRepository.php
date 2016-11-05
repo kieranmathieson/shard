@@ -1,15 +1,14 @@
 <?php
 /**
- * Created by PhpStorm.
- * User: kieran
- * Date: 10/31/16
- * Time: 5:33 PM
+ * @file
+ * Mock object for testing.
+ *
+ * @author Kieran Mathieson
  */
 
 namespace Drupal\shard\Tests;
 
 use Drupal\Core\Entity\EntityDisplayRepositoryInterface;
-use Drupal\Core\Entity\Query\QueryFactory;
 
 
 
@@ -23,6 +22,7 @@ class MockEntityDisplayRepository implements EntityDisplayRepositoryInterface {
    */
   public function getAllViewModes() {
     // TODO: Implement getAllViewModes() method.
+    return [];
   }
 
   /**
@@ -46,6 +46,7 @@ class MockEntityDisplayRepository implements EntityDisplayRepositoryInterface {
    */
   public function getAllFormModes() {
     // TODO: Implement getAllFormModes() method.
+    return [];
   }
 
   /**
@@ -59,6 +60,7 @@ class MockEntityDisplayRepository implements EntityDisplayRepositoryInterface {
    */
   public function getFormModes($entity_type_id) {
     // TODO: Implement getFormModes() method.
+    return [];
   }
 
   /**
@@ -72,6 +74,7 @@ class MockEntityDisplayRepository implements EntityDisplayRepositoryInterface {
    */
   public function getViewModeOptions($entity_type_id) {
     // TODO: Implement getViewModeOptions() method.
+    return [];
   }
 
   /**
@@ -85,6 +88,7 @@ class MockEntityDisplayRepository implements EntityDisplayRepositoryInterface {
    */
   public function getFormModeOptions($entity_type_id) {
     // TODO: Implement getFormModeOptions() method.
+    return [];
   }
 
   /**
@@ -100,6 +104,7 @@ class MockEntityDisplayRepository implements EntityDisplayRepositoryInterface {
    */
   public function getViewModeOptionsByBundle($entity_type_id, $bundle) {
     // TODO: Implement getViewModeOptionsByBundle() method.
+    return [];
   }
 
   /**
@@ -115,6 +120,7 @@ class MockEntityDisplayRepository implements EntityDisplayRepositoryInterface {
    */
   public function getFormModeOptionsByBundle($entity_type_id, $bundle) {
     // TODO: Implement getFormModeOptionsByBundle() method.
+    return [];
   }
 
   /**
@@ -124,5 +130,6 @@ class MockEntityDisplayRepository implements EntityDisplayRepositoryInterface {
    */
   public function clearDisplayModeInfo() {
     // TODO: Implement clearDisplayModeInfo() method.
+    return $this;
   }
 }

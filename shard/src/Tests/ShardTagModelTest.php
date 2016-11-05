@@ -47,7 +47,6 @@ class ShardTagModelTest extends WebTestBase {
 
   function makeShardTagModel(){
     $shardTagModel = new ShardTagModel(
-      \Drupal::service('database'),
       new MockMetadata(),
       \Drupal::service('entity_type.manager'),
       \Drupal::service('renderer'),
@@ -56,7 +55,15 @@ class ShardTagModelTest extends WebTestBase {
     return $shardTagModel;
   }
 
-  function testLoadHostNodeFromStorage() {
+  public function testGroup1() {
+    $this->loadHostNodeFromStorageTest();
+    $this->loadGuestNodeFromStorageTest();
+    $this->getSetShardTypeTest();
+    $this->getSetHostFieldNameTest();
+    $this->getSetViewModeTest();
+  }
+
+  function loadHostNodeFromStorageTest() {
     /* @var \Drupal\node\NodeInterface $page */
     $page = $this->createNode([
       'title' => 'DOG',
@@ -87,7 +94,7 @@ class ShardTagModelTest extends WebTestBase {
 //    }
   }
 
-  function testLoadGuestNodeFromStorage() {
+  function loadGuestNodeFromStorageTest() {
     /* @var \Drupal\node\NodeInterface $page */
     $page = $this->createNode([
       'title' => 'DOG',
@@ -118,7 +125,7 @@ class ShardTagModelTest extends WebTestBase {
 //    }
   }
 
-  function testGetSetShardType() {
+  function getSetShardTypeTest() {
     $shardTagModel = $this->makeShardTagModel();
     $shardTagModel->setShardType('sloth');
     $this->assertEqual(
@@ -128,7 +135,7 @@ class ShardTagModelTest extends WebTestBase {
     );
   }
 
-  function testGetSetHostFieldName() {
+  function getSetHostFieldNameTest() {
     $shardTagModel = $this->makeShardTagModel();
     $shardTagModel->setHostFieldName('body');
     $this->assertEqual(
@@ -138,7 +145,7 @@ class ShardTagModelTest extends WebTestBase {
     );
   }
 
-  function testGetSetViewMode() {
+  function getSetViewModeTest() {
     $shardTagModel = $this->makeShardTagModel();
     $shardTagModel->setViewMode('peekaboo');
     $this->assertEqual(
@@ -146,6 +153,18 @@ class ShardTagModelTest extends WebTestBase {
       'peekaboo',
       'testGetSetViewMode: got expected view mode'
     );
+  }
+
+  function injectGuestNodeHtmlIntoShardTagTest() {
+    $shardTagModel = $this->makeShardTagModel();
+    /* @var \Drupal\node\NodeInterface $page */
+    $guestNode = $this->createNode([
+      'title' => 'DOG',
+      'type' => 'page'
+    ]);
+    $shardTagModel->setGuestNid($guestNode->id());
+
+
   }
 
 }

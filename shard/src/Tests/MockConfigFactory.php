@@ -1,9 +1,9 @@
 <?php
 /**
- * Created by PhpStorm.
- * User: kieran
- * Date: 10/31/16
- * Time: 5:40 PM
+ * @file
+ * Mock object for testing.
+ *
+ * @author Kieran Mathieson
  */
 
 namespace Drupal\shard\Tests;
@@ -19,11 +19,14 @@ class MockConfigFactory implements ConfigFactoryInterface {
    * @param string $name
    *   The name of the configuration object to construct.
    *
-   * @return \Drupal\Core\Config\ImmutableConfig
+   * @return MockImmutableConfig
    *   A configuration object.
    */
   public function get($name) {
-    // TODO: Implement get() method.
+    if ( $name == 'shard.settings' ) {
+      return new MockImmutableConfig();
+    }
+    return NULL;
   }
 
   /**
@@ -71,6 +74,7 @@ class MockConfigFactory implements ConfigFactoryInterface {
    */
   public function reset($name = NULL) {
     // TODO: Implement reset() method.
+    return $this;
   }
 
   /**
@@ -85,6 +89,7 @@ class MockConfigFactory implements ConfigFactoryInterface {
    */
   public function rename($old_name, $new_name) {
     // TODO: Implement rename() method.
+    return $this;
   }
 
   /**
@@ -101,6 +106,7 @@ class MockConfigFactory implements ConfigFactoryInterface {
    */
   public function getCacheKeys() {
     // TODO: Implement getCacheKeys() method.
+    return [];
   }
 
   /**
@@ -110,6 +116,7 @@ class MockConfigFactory implements ConfigFactoryInterface {
    */
   public function clearStaticCache() {
     // TODO: Implement clearStaticCache() method.
+    return $this;
   }
 
   /**
@@ -126,6 +133,7 @@ class MockConfigFactory implements ConfigFactoryInterface {
    */
   public function listAll($prefix = '') {
     // TODO: Implement listAll() method.
+    return [];
   }
 
   /**

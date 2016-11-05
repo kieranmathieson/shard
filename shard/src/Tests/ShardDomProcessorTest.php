@@ -1,8 +1,9 @@
 <?php
 /**
- * Created by PhpStorm.
- * Date: 10/4/16
- * Time: 1:25 PM
+ * @file
+ * Tests for ShardDomProcessor
+ *
+ * @author Kieran Mathieson
  */
 
 namespace Drupal\shard\Tests;

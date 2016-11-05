@@ -54,7 +54,11 @@ class ShardUtilitiesTest extends WebTestBase {
     $this->kentId = $kent->id();
   }
 
-  public function testCurrentUserHasRole() {
+  public function testGroup1() {
+    $this->currentUserHasRoleTest();
+  }
+
+  public function currentUserHasRoleTest() {
     $kent = User::load($this->kentId);
     $this->setCurrentUser($kent);
 

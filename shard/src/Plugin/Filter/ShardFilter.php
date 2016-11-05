@@ -44,11 +44,11 @@ class ShardFilter extends FilterBase {
       $container->get('entity_display.repository'),
       $container->get('entity.query'),
       $container->get('renderer'),
-      $container->get('database'),
-      $container->get('event_dispatcher')
+      $container->get('event_dispatcher'),
+      $container->get('uuid')
     );
-    $text = $shardTagHandler->dbHtmlToViewHtml($text);
+    $text = $shardTagHandler->dbHtmlToViewHtml($text, $langCode);
 
-    return new FilterProcessResult($text);
+    return new FilterProcessResult($text, $langCode);
   }
 }

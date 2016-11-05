@@ -1,9 +1,9 @@
 <?php
 /**
- * Created by PhpStorm.
- * User: kieran
- * Date: 10/31/16
- * Time: 5:41 PM
+ * @file
+ * Mock object for testing.
+ *
+ * @author Kieran Mathieson
  */
 
 namespace Drupal\shard\Tests;
@@ -84,6 +84,7 @@ class MockEntityFieldManager implements EntityFieldManagerInterface {
    */
   public function getFieldMap() {
     // TODO: Implement getFieldMap() method.
+    return [];
   }
 
   /**
@@ -96,6 +97,7 @@ class MockEntityFieldManager implements EntityFieldManagerInterface {
    */
   public function setFieldMap(array $field_map) {
     // TODO: Implement setFieldMap() method.
+    return $this;
   }
 
   /**
@@ -113,6 +115,7 @@ class MockEntityFieldManager implements EntityFieldManagerInterface {
    */
   public function getFieldMapByFieldType($field_type) {
     // TODO: Implement getFieldMapByFieldType() method.
+    return [];
   }
 
   /**
@@ -165,5 +168,6 @@ class MockEntityFieldManager implements EntityFieldManagerInterface {
    */
   public function getExtraFields($entity_type_id, $bundle) {
     // TODO: Implement getExtraFields() method.
+    return [];
   }
 }

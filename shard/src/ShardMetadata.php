@@ -9,15 +9,14 @@
 namespace Drupal\shard;
 
 use Drupal\Core\Entity\EntityDisplayRepositoryInterface;
-use Drupal\Core\Entity\Query\QueryFactoryInterface;
+//use Drupal\Core\Entity\Query\QueryFactory;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Drupal\Core\Entity\EntityTypeBundleInfoInterface;
 use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\Entity\EntityFieldManagerInterface;
 use Drupal\node\NodeInterface;
-use Drupal\Component\EventDispatcher\ContainerAwareEventDispatcher;
+//use Drupal\Component\EventDispatcher\ContainerAwareEventDispatcher;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
-
 use Drupal\Component\Uuid\Uuid;
 
 class ShardMetadata implements ShardMetadataInterface {
@@ -105,7 +104,7 @@ class ShardMetadata implements ShardMetadataInterface {
   /**
    * Entity query object.
    *
-   * @var \Drupal\Core\Entity\Query\QueryFactoryInterface
+   * @var \Drupal\Core\Entity\Query\QueryFactory
    */
   protected $entityQuery;
 
@@ -128,20 +127,21 @@ class ShardMetadata implements ShardMetadataInterface {
 
   public function __construct(
       EntityDisplayRepositoryInterface $entity_display_repository,
-      QueryFactoryInterface $entity_query,
       EntityTypeBundleInfoInterface $bundle_info_manager,
       ConfigFactoryInterface $config_factory,
       EntityFieldManagerInterface $entity_field_manager,
       EventDispatcherInterface $eventDispatcher
       ) {
     $this->entityDisplayRepository = $entity_display_repository;
-    $this->entityQuery = $entity_query;
+//    $this->entityQuery = $entity_query;
     $this->bundleInfoManager = $bundle_info_manager;
     $this->configFactory = $config_factory;
     $this->entityFieldManager = $entity_field_manager;
     $this->eventDispatcher = $eventDispatcher;
     //Load valid nids.
-    $query = $this->entityQuery->get('node');
+//    $query = $this->entityQuery->get('node');
+//    $result = $query->execute();
+    $query = \Drupal::entityQuery('node');
     $result = $query->execute();
     $this->existingNids = array_values($result);
     //Load the view mode names.
@@ -170,7 +170,6 @@ class ShardMetadata implements ShardMetadataInterface {
   public static function create(ContainerInterface $container) {
     return new static(
       $container->get('entity_display.repository'),
-      $container->get('entity.query'),
       $container->get('entity_type.bundle.info'),
       $container->get('config.factory'),
       $container->get('entity_field.manager'),
@@ -215,6 +214,10 @@ class ShardMetadata implements ShardMetadataInterface {
     }
     //Must be a number.
     if ( ! is_numeric($value) ) {
+      return FALSE;
+    }
+    //Must be positive.
+    if ( $value <= 0 ) {
       return FALSE;
     }
     return in_array($value, $this->existingNids);
@@ -287,5 +290,14 @@ class ShardMetadata implements ShardMetadataInterface {
     return $fieldNames;
   }
 
+  /**
+   * Does a node have eligible fields?
+   *
+   * @param \Drupal\node\NodeInterface $node
+   * @return bool True if has eligible fields.
+   */
+  public function nodeHasEligibleFields(NodeInterface $node) {
+    return sizeof($this->listEligibleFieldsForNode($node)) > 0;
+  }
 
 }

@@ -14,7 +14,7 @@ use Drupal\shard\Exceptions\ShardMissingDataException;
 use Drupal\shard\Exceptions\ShardUnexpectedValueException;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
-class ShardDomProcessor {
+class ShardDomProcessor implements ShardDomProcessorInterface {
 
   /**
    * @var ShardMetadataInterface

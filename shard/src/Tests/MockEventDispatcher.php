@@ -1,9 +1,9 @@
 <?php
 /**
- * Created by PhpStorm.
- * User: kieran
- * Date: 10/31/16
- * Time: 5:46 PM
+ * @file
+ * Mock object for testing.
+ *
+ * @author Kieran Mathieson
  */
 
 namespace Drupal\shard\Tests;
@@ -81,6 +81,7 @@ class MockEventDispatcher implements EventDispatcherInterface {
    */
   public function getListeners($eventName = NULL) {
     // TODO: Implement getListeners() method.
+    return [];
   }
 
   /**
@@ -92,5 +93,6 @@ class MockEventDispatcher implements EventDispatcherInterface {
    */
   public function hasListeners($eventName = NULL) {
     // TODO: Implement hasListeners() method.
+    return FALSE;
   }
 }

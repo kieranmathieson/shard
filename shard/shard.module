@@ -12,6 +12,9 @@ use Drupal\Core\Form\FormStateInterface;
 //use Drupal\shard\ShardTagHandler;
 //use Drupal\views\ViewExecutable;
 use Drupal\node\NodeInterface;
+
+use Drupal\shard\ShardDataRepository;
+
 /**
  * Implements hook_help().
  * @param $route_name
@@ -145,26 +148,6 @@ function shard_form_alter(&$form, FormStateInterface $formState, $form_id) {
 
 
 
-function shard_replace_tags_in_form_fields($form, &$form_state) {
-  $container = \Drupal::getContainer();
-  $shardTagHandler = $container->get('shard.tag_handler');
-//  $shard_tag_handler = new ShardTagHandler(
-//    $container->get('shard.metadata'),
-//    $container->get('shard.dom_processor'),
-//    $container->get('entity_type.manager'),
-//    $container->get('entity_display.repository'),
-//    $container->get('entity.query'),
-//    $container->get('renderer'),
-//    $container->get('database'),
-//    $container->get('event_dispatcher')
-//  );
-  $shardTagHandler->entityCkTagsToDbTags($form_state);
-}
-
-function shard_remove_shards_on_delete($form, &$form_state) {
-  drupal_set_message('delete');
-}
-
 /**
  * Implements hook_node_presave().
  *
@@ -177,56 +160,32 @@ function shard_remove_shards_on_delete($form, &$form_state) {
  * @param NodeInterface $node
  */
 function shard_node_presave(NodeInterface $node) {
+  /* @var \Drupal\shard\ShardDataRepository $shardDataRepo  */
+  global $shardDataRepo;
+  $shardDataRepo = NULL;
   if ( array_key_exists('simpletest.settings', $GLOBALS['conf']) ) {
     return;
   }
   $container = \Drupal::getContainer();
-  /* @var \Drupal\shard\ShardMetadataInterface $metadata */
-  $metadata = $container->get('shard.metadata');
-  //Get the fields that are eligible to be sharded.
-  $eligibleFieldsForNode = $metadata->listEligibleFieldsForNode($node);
-  //What eligible fields are on the form?
-  $eligibleFieldsOnForm = [];
-  $r=5;
-  return;
-  foreach( $eligibleFieldsForNode as $eligibleFieldName ) {
-    if ( isset( $form[$eligibleFieldName] ) ) {
-      $eligibleFieldsOnForm[] = $eligibleFieldName;
-    }
+  /* @var \Drupal\shard\ShardMetadata $shardMetaData */
+  $shardMetaData = $container->get('shard.metadata');
+  if ( $shardMetaData->nodeHasEligibleFields($node) ) {
+    $shardTagHandler = $container->get('shard.tag_handler');
+    $shardDataRepo = $shardTagHandler->entityCkTagsToDbTags($node);
   }
 
-
-  $container = \Drupal::getContainer();
-  $shardTagHandler = $container->get('shard.tag_handler');
-//  $shard_tag_handler = new ShardTagHandler(
-//    $container->get('shard.metadata'),
-//    $container->get('shard.dom_processor'),
-//    $container->get('entity_type.manager'),
-//    $container->get('entity_display.repository'),
-//    $container->get('entity.query'),
-//    $container->get('renderer'),
-//    $container->get('database'),
-//    $container->get('event_dispatcher')
-//  );
-  $shardTagHandler->entityCkTagsToDbTags($node);
 }
 
 
 function shard_node_insert(Drupal\Core\Entity\EntityInterface $entity) {
-  if ( isset($_REQUEST['temp_nid']) ) {
+  /* @var \Drupal\shard\ShardDataRepository $shardDataRepo  */
+  global $shardDataRepo;
+  if ( ! is_null($shardDataRepo) ) {
     $container = \Drupal::getContainer();
     $shardTagHandler = $container->get('shard.tag_handler');
-//    $shard_tag_handler = new ShardTagHandler(
-//      $container->get('shard.metadata'),
-//      $container->get('shard.dom_processor'),
-//      $container->get('entity_type.manager'),
-//      $container->get('entity_display.repository'),
-//      $container->get('entity.query'),
-//      $container->get('renderer'),
-//      $container->get('database'),
-//      $container->get('event_dispatcher')
-//    );
-    $shardTagHandler->replaceTempNid($entity);
+
+
+
   }
 }
 

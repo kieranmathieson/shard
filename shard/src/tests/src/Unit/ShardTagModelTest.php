@@ -1,9 +1,9 @@
 <?php
 /**
- * Created by PhpStorm.
- * User: kieran
- * Date: 10/30/16
- * Time: 11:44 AM
+ * @file
+ * Unit tests for ShardTagModel. Functional tests are elsewhere.
+ *
+ * @author Kieran Mathieson
  */
 
 namespace Drupal\Tests\shard\Unit;

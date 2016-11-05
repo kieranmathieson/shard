@@ -1,9 +1,9 @@
 <?php
 /**
- * Created by PhpStorm.
- * User: kieran
- * Date: 10/31/16
- * Time: 5:39 PM
+ * @file
+ * Mock object for testing.
+ *
+ * @author Kieran Mathieson
  */
 
 namespace Drupal\shard\Tests;
@@ -23,6 +23,7 @@ class MockEntityTypeBundleInfo implements EntityTypeBundleInfoInterface {
    */
   public function getAllBundleInfo() {
     // TODO: Implement getAllBundleInfo() method.
+    return [];
   }
 
   /**
@@ -39,6 +40,7 @@ class MockEntityTypeBundleInfo implements EntityTypeBundleInfoInterface {
    */
   public function getBundleInfo($entity_type) {
     // TODO: Implement getBundleInfo() method.
+    return [];
   }
 
   /**

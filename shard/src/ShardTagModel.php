@@ -9,7 +9,7 @@
 namespace Drupal\shard;
 
 use Drupal\Component\DependencyInjection\Container;
-use Drupal\Core\Database\Connection;
+//use Drupal\Core\Database\Connection;
 use Drupal\shard\Exceptions\ShardMissingDataException;
 use Drupal\shard\Exceptions\ShardNotFoundException;
 use Drupal\shard\Exceptions\ShardUnexpectedValueException;
@@ -21,12 +21,12 @@ use Drupal\Core\Render\RendererInterface;
 
 class ShardTagModel {
 
-  /**
-   * Database connection service.
-   *
-   * @var Connection
-   */
-  protected $databaseConnection;
+//  /**
+//   * Database connection service.
+//   *
+//   * @var Connection
+//   */
+//  protected $databaseConnection;
 
   /**
    * Entity type manager.
@@ -124,13 +124,11 @@ class ShardTagModel {
   protected $localContent = NULL;
 
   public function __construct(
-      Connection $databaseConnection,
       ShardMetadataInterface  $metadata,
       EntityTypeManagerInterface $entityTypeManager,
       RendererInterface $renderer,
       ShardDomProcessor $domProcessor
       ) {
-    $this->databaseConnection = $databaseConnection;
     $this->metadata = $metadata;
     $this->entityTypeManager = $entityTypeManager;
     $this->renderer = $renderer;
@@ -143,7 +141,6 @@ class ShardTagModel {
    */
   public static function create(ContainerInterface $container) {
     return new static(
-      $container->get('database'),
       $container->get('shard.metadata'),
       $container->get('entity_type.manager'),
       $container->get('renderer'),
@@ -488,25 +485,25 @@ class ShardTagModel {
    *
    * @return \DOMElement
    */
-  public function createShardEmbeddingElement() {
-    //Load the node to be embedded.
-    $guestNode = $this->loadGuestNodeFromStorage();
-    //Render the selected display of the shard.
-    $viewBuilder = $this->entityTypeManager->getViewBuilder('node');
-    $renderArray = $viewBuilder->view($guestNode, $this->getViewMode());
-    $viewHtml = (string)$this->renderer->renderRoot($renderArray);
-    //DOM it.
-    //Wrap in a body tag to make processing easier.
-    $viewDocument = $this->domProcessor->createDomDocumentFromHtml('<body>' . $viewHtml . '</body>');
-    //Get local content.
-    $localContent = $this->getLocalContent();
-    //Add local content, if any, to the rendered display. The rendered view
-    // mode must have a div with the class local-content.
-    if ($localContent) {
-      $this->insertLocalContentIntoViewHtml( $viewDocument, $localContent );
-    }
-    return $viewDocument->getElementsByTagName('body')->item(0);
-  }
+//  public function createShardEmbeddingElement() {
+//    //Load the node to be embedded.
+//    $guestNode = $this->loadGuestNodeFromStorage();
+//    //Render the selected display of the shard.
+//    $viewBuilder = $this->entityTypeManager->getViewBuilder('node');
+//    $renderArray = $viewBuilder->view($guestNode, $this->getViewMode());
+//    $viewHtml = (string)$this->renderer->renderRoot($renderArray);
+//    //DOM it.
+//    //Wrap in a body tag to make processing easier.
+//    $viewDocument = $this->domProcessor->createDomDocumentFromHtml('<body>' . $viewHtml . '</body>');
+//    //Get local content.
+//    $localContent = $this->getLocalContent();
+//    //Add local content, if any, to the rendered display. The rendered view
+//    // mode must have a div with the class local-content.
+//    if ($localContent) {
+//      $this->insertLocalContentIntoViewHtml( $viewDocument, $localContent );
+//    }
+//    return $viewDocument->getElementsByTagName('body')->item(0);
+//  }
 
   /**
    * Add local content to HTML of a view of a shard.
@@ -548,7 +545,7 @@ class ShardTagModel {
    * @param $shardTagElement
    *
    */
-  public function injectGuestViewHtmlIntoShardTag(
+  public function injectGuestNodeHtmlIntoShardTag(
       \DOMElement $shardTagElement) {
     //Render the selected display of the guest node.
     $guestNode = $this->loadGuestNodeFromStorage();
@@ -560,7 +557,7 @@ class ShardTagModel {
     $domDocForGuestViewExLocalContent = $this->domProcessor->createDomDocumentFromHtml(
       '<body>' . $htmlWithoutLocalContent . '</body>'
     );
-    //Is there local content?
+    //Is there local content to inject?
     if ( $this->getLocalContent() ) {
       //Inject local content into the guest node's rendering.
       //Find local content container to put content in.
