@@ -47,7 +47,6 @@ function shard_form_alter(&$form, FormStateInterface $formState, $form_id) {
   //Is this a form for an entity?
   if ( method_exists($formState->getFormObject(), 'getEntity') ) {
     //Aye.
-    //Get some services.
     /* @var \Drupal\shard\ShardMetadataInterface $metadata */
     $metadata = \Drupal::service('shard.metadata');
     //Get the fields that are eligible to be sharded.
@@ -107,6 +106,10 @@ function shard_form_alter(&$form, FormStateInterface $formState, $form_id) {
           } //It's a field instance (numeric key).
         } //End foreach widget.
       } //End foreach eligible field on the form.
+      $submitHandler = '_shard_node_edit_submit_handler';
+      $form['actions']['submit']['#submit'][] = $submitHandler;
+      $form['actions']['publish']['#submit'][] = $submitHandler;
+      $form['actions']['unpublish']['#submit'][] = $submitHandler;
     } //End if there are eligible fields.
   } //End this is an entity form.
 }
@@ -147,34 +150,26 @@ function shard_form_alter(&$form, FormStateInterface $formState, $form_id) {
 //}
 
 
-
 /**
- * Implements hook_node_presave().
+ * Runs after a node with eligible shard fields is submitted.
  *
- * This is called when saving an updated node, or creating a new one.
- * Creating a node is tricky, since the nid for the host node is
- * not known, so creating all the shard collection item entities has to
- * be delayed until after the nid is known. The node's fields have
- * to be reprocessed, so that the nids
- *
- * @param NodeInterface $node
+ * @param $form
+ * @param \Drupal\Core\Form\FormStateInterface $form_state
  */
-function shard_node_presave(NodeInterface $node) {
-  /* @var \Drupal\shard\ShardDataRepository $shardDataRepo  */
-  global $shardDataRepo;
-  $shardDataRepo = NULL;
+function _shard_node_edit_submit_handler($form, FormStateInterface $form_state) {
+  //If this is called during testing, skip it.
   if ( array_key_exists('simpletest.settings', $GLOBALS['conf']) ) {
     return;
   }
+  /* @var \Drupal\shard\ShardDataRepository $shardDataRepo  */
+  global $shardDataRepo;
+  $shardDataRepo = NULL;
   $container = \Drupal::getContainer();
-  /* @var \Drupal\shard\ShardMetadata $shardMetaData */
-  $shardMetaData = $container->get('shard.metadata');
-  if ( $shardMetaData->nodeHasEligibleFields($node) ) {
-    $shardTagHandler = $container->get('shard.tag_handler');
-    $shardDataRepo = $shardTagHandler->entityCkTagsToDbTags($node);
-  }
+  $shardTagHandler = $container->get('shard.tag_handler');
+  $shardDataRepo = $shardTagHandler->entityCkTagsToDbTags($node);
 
 }
+
 
 
 function shard_node_insert(Drupal\Core\Entity\EntityInterface $entity) {
@@ -183,6 +178,10 @@ function shard_node_insert(Drupal\Core\Entity\EntityInterface $entity) {
   if ( ! is_null($shardDataRepo) ) {
     $container = \Drupal::getContainer();
     $shardTagHandler = $container->get('shard.tag_handler');
+
+    if ( $shardDataRepo->isNewNode() ) {
+      //
+    }
 
 
 

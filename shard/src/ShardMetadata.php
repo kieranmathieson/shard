@@ -300,4 +300,16 @@ class ShardMetadata implements ShardMetadataInterface {
     return sizeof($this->listEligibleFieldsForNode($node)) > 0;
   }
 
+
+  /**
+   * @param $key
+   * @param $data
+   */
+  public function stashDataInConFig($key, $data) {
+    /* @var \Drupal\Core\Config\Config $configSettings */
+    $configSettings = $this->configFactory->getEditable('shard.settings');
+    $configSettings->set($key, $data);
+    $configSettings->save();
+  }
+
 }

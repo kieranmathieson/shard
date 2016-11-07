@@ -120,5 +120,7 @@ interface ShardMetadataInterface {
    */
   public function listEligibleFieldsForBundle($bundleName);
 
+  public function nodeHasEligibleFields(NodeInterface $node);
 
+  public function stashDataInConFig($key, $data);
 }

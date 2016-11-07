@@ -147,7 +147,6 @@ class ShardTagHandler {
    * the .module file. Return data to be used by later hooks.
    *
    * @param \Drupal\Core\Entity\EntityInterface|\Drupal\node\NodeInterface $hostNode
-   * @return ShardDataRepository Data returned for use by later hookd.
    */
   public function entityCkTagsToDbTags(EntityInterface $hostNode) {
     $newShardCollectionItems = [];
@@ -197,15 +196,17 @@ class ShardTagHandler {
         \Drupal::logger('shards')->error($message);
       }
     } // End for each eligible field.
-    //Create holder for the collected data.
+    //Create holder for the collected data. Passed back to module,
+    //which uses it in later processing.
     $shardDataRepo = new ShardDataRepository();
-    if ( $hostNode->isNew() ) {
-      $shardDataRepo->setNewNodePlaceholderNid($hostNid);
-    }
+    //Fill it.
     $shardDataRepo
+      ->setIsNewNode($hostNode->isNew())
+      ->setNewNodePlaceholderNid($hostNid)
       ->setOldShards($oldShards)
       ->setNewShardCollectionItems($newShardCollectionItems);
-    return $shardDataRepo;
+    //Save it.
+    $this->metadata->stashDataInConFig('new-node-repo', $shardDataRepo);
   }
 
   /**

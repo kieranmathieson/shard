@@ -13,6 +13,14 @@ use Drupal\Component\Uuid\Uuid;
 use Drupal\shard\Exceptions\ShardUnexpectedValueException;
 
 class ShardDataRepository {
+
+  /**
+   * Is this data for a new node?
+   *
+   * @var bool
+   */
+  protected $isNewNode = FALSE;
+
   /**
    * UUID used as placeholder for new node's nid.
    *
@@ -36,6 +44,22 @@ class ShardDataRepository {
   protected $newShardCollectionItems;
 
   /**
+   * @param boolean $isNewNode
+   * @return ShardDataRepository
+   */
+  public function setIsNewNode($isNewNode) {
+    $this->isNewNode = $isNewNode;
+    return $this;
+  }
+
+  /**
+   * @return boolean
+   */
+  public function isNewNode() {
+    return $this->isNewNode;
+  }
+
+  /**
    * @return mixed
    */
   public function getNewNodePlaceholderNid() {
@@ -48,9 +72,11 @@ class ShardDataRepository {
    * @throws \Drupal\shard\Exceptions\ShardUnexpectedValueException
    */
   public function setNewNodePlaceholderNid($value) {
-    if ( ! Uuid::isValid($value) ) {
+    $isPositiveNumber = is_numeric($value) && $value > 0;
+    $isUuid = Uuid::isValid($value);
+    if ( ! $isPositiveNumber && ! $isUuid ) {
       throw new ShardUnexpectedValueException(
-        sprintf('Nid should be a UUID. Got: %s', $value)
+        sprintf('Nid should be number or UUID. Got: %s', $value)
       );
     }
     $this->newNodePlaceholderNid = $value;
