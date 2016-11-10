@@ -24,7 +24,7 @@
        * @returns {string}
        */
       url: function () {
-        return '/sloth/preview/' + this.get('nid')
+        return '/shard/preview/' + this.get('nid')
           + '/' + Drupal.SlothSpace.currentViewMode + '?_format=json';
       },
       fetch: function (viewMode) {
@@ -37,7 +37,7 @@
           accepts: {
             text: "application/json"
           },
-          url: '/sloth/preview/' + this.get('nid') + '/' + viewMode + '?_format=json',
+          url: '/shard/preview/' + this.get('nid') + '/' + viewMode + '?_format=json',
           beforeSend: function (request) {
             request.setRequestHeader("X-CSRF-Token", Drupal.SlothSpace.securityToken);
           }

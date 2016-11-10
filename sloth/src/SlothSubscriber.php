@@ -32,7 +32,7 @@ class SlothSubscriber implements EventSubscriberInterface {
    * {@inheritdoc}
    */
   static function getSubscribedEvents(){
-    $events['shard.register_plugins'][] = array('registerPlugin');
+    $events['shard.register_plugins'][] = ['registerPlugin'];
 //    $events['shard.presave'][] = array('presave');
     return $events;
   }

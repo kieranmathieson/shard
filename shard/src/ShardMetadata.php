@@ -10,6 +10,7 @@ namespace Drupal\shard;
 
 use Drupal\Core\Entity\EntityDisplayRepositoryInterface;
 //use Drupal\Core\Entity\Query\QueryFactory;
+use Drupal\Core\Entity\EntityInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Drupal\Core\Entity\EntityTypeBundleInfoInterface;
 use Drupal\Core\Config\ConfigFactoryInterface;
@@ -223,6 +224,14 @@ class ShardMetadata implements ShardMetadataInterface {
     return in_array($value, $this->existingNids);
   }
 
+  /**
+   * Get the valid view modes.
+   *
+   * @return string[] View modes
+   */
+  public function getViewModes(){
+    return $this->viewModes;
+  }
 
   /**
    * @param $value
@@ -244,11 +253,11 @@ class ShardMetadata implements ShardMetadataInterface {
    * Return a list of the names of fields that are allowed to have
    * shards in them.
    *
-   * @param \Drupal\node\NodeInterface $node
+   * @param \Drupal\Core\Entity\EntityInterface $node
    * @return array Names of fields that may have sloths embedded.
    * @internal param \Drupal\Core\Entity\EntityInterface $entity Entity with the fields.
    */
-  public function listEligibleFieldsForNode(NodeInterface $node) {
+  public function listEligibleFieldsForNode(EntityInterface $node) {
     $bundle_name = $node->bundle();
     return $this->listEligibleFieldsForBundle( $bundle_name );
   }
@@ -312,4 +321,12 @@ class ShardMetadata implements ShardMetadataInterface {
     $configSettings->save();
   }
 
+  /**
+   * @param $key
+   * @return array|mixed|null
+   */
+  public function fetchDataFromConfig($key) {
+    $this->shardConfigs = $this->configFactory->get('shard.settings');
+    return $this->shardConfigs->get($key);
+  }
 }

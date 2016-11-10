@@ -48,7 +48,6 @@ class ShardFilter extends FilterBase {
       $container->get('uuid')
     );
     $text = $shardTagHandler->dbHtmlToViewHtml($text, $langCode);
-
     return new FilterProcessResult($text, $langCode);
   }
 }

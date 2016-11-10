@@ -14,3 +14,9 @@ shard.default_controller_listPlugins:
   requirements:
     _permission: 'access content'
 
+shard.process_saved_nodes:
+  path: '/shard/process-new-node'
+  defaults:
+    _controller: '\Drupal\shard\Controller\ShardController::processSavedNode'
+  requirements:
+    _permission: 'insert shards'

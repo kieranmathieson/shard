@@ -12,7 +12,7 @@
   Drupal.SlothSpace.collections.Pack = Backbone.Collection.extend({
       model: Drupal.SlothSpace.models.Sloth,
       url: function(){
-        return '/sloth/index?_format=json';
+        return '/shard/index/sloth?_format=json';
       }
   });
 

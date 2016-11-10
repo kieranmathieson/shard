@@ -5,13 +5,15 @@ namespace Drupal\shard\Plugin\rest\resource;
 use Drupal\Core\Session\AccountProxyInterface;
 use Drupal\rest\Plugin\ResourceBase;
 use Drupal\rest\ResourceResponse;
+//use Drupal\shard\ShardMetadata;
+use Drupal\shard\ShardMetadataInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 use Psr\Log\LoggerInterface;
 use Drupal\Core\Entity\EntityDisplayRepositoryInterface;
-use Drupal\Core\Config\ConfigFactoryInterface;
+//use Drupal\Core\Config\ConfigFactoryInterface;
 
-use Drupal\shard\Exceptions\ShardMissingDataException;
+//use Drupal\shard\Exceptions\ShardMissingDataException;
 
 /**
  * Provides a resource to get eligible view modes.
@@ -38,11 +40,18 @@ class ShardViewModeList extends ResourceBase {
    *
    * @var \Drupal\Core\Config\ConfigFactoryInterface
    */
-  protected $config_factory;
+//  protected $config_factory;
 
-  /* @var \Drupal\Core\Entity\EntityDisplayRepositoryInterface $entity_display_repository */
-  protected $entity_display_repository;
+  /* @var \Drupal\Core\Entity\EntityDisplayRepositoryInterface $entityDisplayRepository */
+  protected $entityDisplayRepository;
 
+
+  /**
+   * Object holding metadata for fields and nodes.
+   *
+   * @var ShardMetadataInterface
+   */
+  protected $metadata;
 
   /**
    * Constructs a Drupal\rest\Plugin\ResourceBase object.
@@ -56,11 +65,12 @@ class ShardViewModeList extends ResourceBase {
    * @param array $serializer_formats
    *   The available serialization formats.
    * @param \Psr\Log\LoggerInterface $logger
-   *   A logger instance.
    * @param \Drupal\Core\Session\AccountProxyInterface $current_user
    *   A current user instance.
-   * @param \Drupal\Core\Config\ConfigFactoryInterface $config_factory
    * @param \Drupal\Core\Entity\EntityDisplayRepositoryInterface $entity_display_repository
+   * @param \Drupal\shard\ShardMetadata|\Drupal\shard\ShardMetadataInterface $metadata
+   * @internal param \Psr\Log\LoggerInterface $logger A logger instance.*   A logger instance.
+   * @internal param \Drupal\Core\Config\ConfigFactoryInterface $config_factory
    */
   public function __construct(
     array $configuration,
@@ -69,12 +79,14 @@ class ShardViewModeList extends ResourceBase {
     array $serializer_formats,
     LoggerInterface $logger,
     AccountProxyInterface $current_user,
-    ConfigFactoryInterface $config_factory,
-    EntityDisplayRepositoryInterface $entity_display_repository) {
+//    ConfigFactoryInterface $config_factory,
+    EntityDisplayRepositoryInterface $entity_display_repository,
+    ShardMetadataInterface $metadata) {
     parent::__construct($configuration, $plugin_id, $plugin_definition, $serializer_formats, $logger);
     $this->currentUser = $current_user;
-    $this->config_factory = $config_factory;
-    $this->entity_display_repository = $entity_display_repository;
+//    $this->config_factory = $config_factory;
+    $this->entityDisplayRepository = $entity_display_repository;
+    $this->metadata = $metadata;
   }
 
   /**
@@ -88,8 +100,9 @@ class ShardViewModeList extends ResourceBase {
       $container->getParameter('serializer.formats'),
       $container->get('logger.factory')->get('shard'),
       $container->get('current_user'),
-      \Drupal::service('config.factory'),
-      \Drupal::service('entity_display.repository')
+//      $container->get('config.factory'),
+      $container->get('entity_display.repository'),
+      $container->get('shard.metadata')
     );
   }
 
@@ -103,23 +116,25 @@ class ShardViewModeList extends ResourceBase {
     if (!$this->currentUser->hasPermission('access content')) {
       throw new AccessDeniedHttpException();
     }
-    $config_settings = $this->config_factory->get('shard.settings');
-    $config_view_modes = $config_settings->get('view_modes');
-    if ( sizeof($config_view_modes) == 0 ) {
-      throw new ShardMissingDataException('No shard view modes available.');
-    }
+    /* @var string[] $viewModes */
+    $viewModes = $this->metadata->getViewModes();
+//    $config_settings = $this->config_factory->get('shard.settings');
+//    $config_view_modes = $config_settings->get('view_modes');
+//    if ( sizeof($config_view_modes) == 0 ) {
+//      throw new ShardMissingDataException('No shard view modes available.');
+//    }
     //Get definitions of all the view modes that exist for nodes,
     //so can return the label of the Chosen Ones.
-    $all_view_modes = $this->entity_display_repository->getViewModes('node');
-    $view_mode_list = [];
-    foreach($config_view_modes as $view_mode_machine_name) {
+    $allViewModes = $this->entityDisplayRepository->getViewModes('node');
+    $viewModeList = [];
+    foreach($viewModes as $viewMode) {
       //Look up the label of the view mode.
-      $view_mode_list[] = [
-        'machineName' => $view_mode_machine_name,
-        'label' => $all_view_modes[$view_mode_machine_name]['label'],
+      $viewModeList[] = [
+        'machineName' => $viewMode,
+        'label' => $allViewModes[$viewMode]['label'],
       ];
     }
-    return new ResourceResponse($view_mode_list);
+    return new ResourceResponse($viewModeList);
   }
 
 }

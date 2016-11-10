@@ -11,9 +11,11 @@ use Drupal\Core\Form\FormStateInterface;
 //use Drupal\Component\Utility\Html;
 //use Drupal\shard\ShardTagHandler;
 //use Drupal\views\ViewExecutable;
-use Drupal\node\NodeInterface;
+//use Drupal\node\NodeInterface;
 
 use Drupal\shard\ShardDataRepository;
+use Drupal\shard\ShardMetadata;
+use Drupal\shard\Exceptions\ShardException;
 
 /**
  * Implements hook_help().
@@ -47,6 +49,10 @@ function shard_form_alter(&$form, FormStateInterface $formState, $form_id) {
   //Is this a form for an entity?
   if ( method_exists($formState->getFormObject(), 'getEntity') ) {
     //Aye.
+    //Can the user mess with shards?
+    if ( ! \Drupal::currentUser()->hasPermission('insert shards') ) {
+      return;
+    }
     /* @var \Drupal\shard\ShardMetadataInterface $metadata */
     $metadata = \Drupal::service('shard.metadata');
     //Get the fields that are eligible to be sharded.
@@ -68,16 +74,6 @@ function shard_form_alter(&$form, FormStateInterface $formState, $form_id) {
       //Convert the shard tags from DB format to CK format.
       $container = \Drupal::getContainer();
       $shardTagHandler = $container->get('shard.tag_handler');
-//      $shardTagHandler = new ShardTagHandler(
-//        $container->get('shard.metadata'),
-//        $container->get('shard.dom_processor'),
-//        $container->get('entity_type.manager'),
-//        $container->get('entity_display.repository'),
-//        $container->get('entity.query'),
-//        $container->get('renderer'),
-//        $container->get('database'),
-//        $container->get('event_dispatcher')
-//      );
       //For each field...
       foreach( $eligibleFieldsOnForm as $fieldName ) {
         //For each instance...
@@ -115,77 +111,172 @@ function shard_form_alter(&$form, FormStateInterface $formState, $form_id) {
 }
 
 
-//  if ( ! \Drupal::currentUser()->hasPermission('edit shard shard field manually') ) {
-//    $form['field_shard']['#type'] = 'hidden';
-//  }
-//  else {
-//Is this a form for entities?
-
-//  if ( isset($form['#entity_builders']) ) {
-//    $form['actions']['submit']['#submit'][] = 'shard_replace_tags_in_form_fields';
-//    $form['actions']['preview']['#submit'][] = 'shard_replace_tags_in_form_fields';
-//    $form['actions']['publish']['#submit'][] = 'shard_replace_tags_in_form_fields';
-//    $form['actions']['unpublish']['#submit'][] = 'shard_replace_tags_in_form_fields';
-//    $form['actions']['delete']['#submit'][] = 'shard_remove_shards_on_delete';
-//  }
-
-//  $form_state->getFormObject()->getEntity()
-//  }
-
-
-//function shard_entity_view_alter(array &$build,
-//                               \Drupal\Core\Entity\EntityInterface $entity,
-//                               \Drupal\Core\Entity\Display\EntityViewDisplayInterface $display) {
-//
-//  $container = \Drupal::getContainer();
-//  $shard_tag_handler = new ShardTagHandler(
-////    \Drupal::service('shard.eligible_fields'),
-//    $container->get('entity_type.manager'),
-//    $container->get('entity_display.repository'),
-//    $container->get('entity.query'),
-//    $container->get('renderer')
-//  );
-//  $r=89;
-////  $shard_tag_handler->dbTagsToViewTags($build, $entity);
-//}
-
-
 /**
  * Runs after a node with eligible shard fields is submitted.
  *
  * @param $form
  * @param \Drupal\Core\Form\FormStateInterface $form_state
  */
-function _shard_node_edit_submit_handler($form, FormStateInterface $form_state) {
+//function _shard_node_edit_submit_handler($form, FormStateInterface $form_state) {
+//  //If this is called during testing, skip it.
+//  if ( array_key_exists('simpletest.settings', $GLOBALS['conf']) ) {
+//    return;
+//  }
+//  /* @var \Drupal\shard\ShardDataRepository $shardDataRepo  */
+//  global $shardDataRepo;
+//  $shardDataRepo = NULL;
+//  $container = \Drupal::getContainer();
+//  $shardTagHandler = $container->get('shard.tag_handler');
+//  $shardDataRepo = $shardTagHandler->formCkTagsToDbTags($form_state);
+//
+//}
+
+
+/**
+ * Convert shard tags from their CKEditor version to their DB storage
+ * version for all eligible fields in $entity. Called by a hook in
+ * the .module file. Return data to be used by later hooks.
+ *
+ * @param $form
+ * @param \Drupal\Core\Form\FormStateInterface $formState
+ */
+function _shard_node_edit_submit_handler($form, FormStateInterface $formState) {
   //If this is called during testing, skip it.
   if ( array_key_exists('simpletest.settings', $GLOBALS['conf']) ) {
     return;
   }
-  /* @var \Drupal\shard\ShardDataRepository $shardDataRepo  */
-  global $shardDataRepo;
-  $shardDataRepo = NULL;
-  $container = \Drupal::getContainer();
-  $shardTagHandler = $container->get('shard.tag_handler');
-  $shardDataRepo = $shardTagHandler->entityCkTagsToDbTags($node);
-
-}
-
-
-
-function shard_node_insert(Drupal\Core\Entity\EntityInterface $entity) {
-  /* @var \Drupal\shard\ShardDataRepository $shardDataRepo  */
-  global $shardDataRepo;
-  if ( ! is_null($shardDataRepo) ) {
-    $container = \Drupal::getContainer();
-    $shardTagHandler = $container->get('shard.tag_handler');
-
-    if ( $shardDataRepo->isNewNode() ) {
-      //
+  //Can the user mess with shards?
+  if ( ! \Drupal::currentUser()->hasPermission('sample permission 1') ) {
+    return;
+  }
+  $newShardCollectionItems = [];
+  $oldShardIds = [];
+  /* @var \Drupal\node\NodeForm $nodeForm */
+  $nodeForm = $formState->getFormObject();
+  /* @var \Drupal\node\NodeInterface $hostNode */
+  $hostNode = $nodeForm->getEntity();
+  $isNewNode = $hostNode->isNew();
+  if ( $isNewNode ) {
+    //Use a temporary fake nid. It will be replaced when the real nid is
+    //available.
+    $hostNid = \Drupal::service('uuid')->generate();
+  }
+  else {
+    //This is an existing node, with an nid.
+    //Get the nid of the node containing the references.
+    $hostNid = $hostNode->id();
+    //Get the ids of shard collection items that refer to the host node.
+    //They'll be erased later.
+    $oldShardIds = shard_get_shard_item_ids_for_host_node($hostNid);
+  }
+  //Get the names of the fields that are eligible for shards.
+  /* @var ShardMetadata $metadata */
+  $metadata = \Drupal::service('shard.metadata');
+  $eligibleFields = $metadata->listEligibleFieldsForNode($hostNode);
+  /* @var \Drupal\shard\ShardTagHandler $tagHandler */
+  $tagHandler = \Drupal::service('shard.tag_handler');
+  foreach($eligibleFields as $fieldName) {
+    try {
+      $fieldValues = $formState->getValue($fieldName);
+      //Does the field exist on the form?
+      if ( $fieldValues ) {
+        //Loop over each value for this field (could be multivalued).
+        for ($delta = 0; $delta < sizeof($fieldValues); $delta++) {
+          //Translate the HTML.
+          //This will also update the field collection in the shards' nodes
+          //to show the shards' insertion into the host nodes.
+          //For existing host nodes, the data will be saved during
+          //this process.
+          //For new nodes, the data on field collections will be stored,
+          //and used later once the nid of the host is known. That data
+          //is stored in $newShardCollectionItems.
+          $fieldValues[$delta]['value'] = $tagHandler->ckHtmlToDbHtml(
+            $fieldValues[$delta]['value'], //The HTML to process.
+            $newShardCollectionItems, //Shard collection item data.
+            $hostNid,
+            $fieldName,
+            $delta
+          );
+        } //End foreach value of the field
+        //Store the changed data.
+        $formState->setValue($fieldName, $fieldValues);
+      }
+    } catch (ShardException $e) {
+      $message = t(
+          'Problem detected during shard processing for the field %field. '
+          . 'It has been recorded in the log. Deets:', ['%field' => $fieldName])
+        . '<br><br>' . $e->getMessage();
+      drupal_set_message($message, 'error');
+      \Drupal::logger('shards')->error($message);
     }
-
-
-
+  } // End for each eligible field.
+  if ( $isNewNode ) {
+    //Create holder for the collected data. Passed back to module,
+    //which uses it in later processing.
+    $shardDataRepo = new ShardDataRepository();
+    //Fill it.
+    $shardDataRepo
+      ->setNewShardCollectionItems($newShardCollectionItems)
+      ->setHostPlaceholderNid($hostNid);
+    //Save it.
+    $metadata->stashDataInConFig(
+      ShardMetadata::SHARD_NODE_SAVE_DATA_REPO, $shardDataRepo);
+    $formState->setRedirect('shard.process_saved_nodes');
+  }
+  else {
+    //Edited existing node.
+    shard_erase_old_shards($oldShardIds);
   }
 }
+
+/**
+ * Get the ids of the shard collection items that refer to a host nid.
+ *
+ * @param int $hostNid Host nid to look for.
+ * @return int[] Ids.
+ */
+function shard_get_shard_item_ids_for_host_node($hostNid){
+  /* @var \Drupal\Core\Entity\Query\QueryFactory */
+  $queryService = \Drupal::service('entity.query');
+  $query = $queryService->get('field_collection_item')
+    ->condition('field_host_node', $hostNid);
+  $result = $query->execute();
+  return $result;
+}
+
+
+function shard_erase_old_shards($oldShardIds) {
+  //Erase old shards.
+  $itemsToDelete = \Drupal::service('entity_type.manager')->
+    getStorage('field_collection_item')->loadMultiple($oldShardIds);
+  foreach ($itemsToDelete as $item) {
+    $item->delete();
+  }
+}
+
+/**
+ * Implements hook_ENTITY_TYPE_insert().
+ * @param \Drupal\node\NodeInterface $node
+ */
+function shard_node_insert(Drupal\node\NodeInterface $node) {
+  //At this point, the node's nid is known. Add it to the
+  //data used to create shard collection items after a
+  //redirect.
+  /* @var ShardMetadata $metadata */
+  $metadata = \Drupal::service('shard.metadata');
+  if ( $metadata->nodeHasEligibleFields($node) ) {
+    //Load the existing data set.
+    /* @var \Drupal\shard\ShardDataRepository $dataRepo */
+    $dataRepo = $metadata->fetchDataFromConfig(
+      ShardMetadata::SHARD_NODE_SAVE_DATA_REPO);
+    //Add the id.
+    $dataRepo->setActualHostNid($node->id());
+    //Save.
+    $metadata->stashDataInConFig(
+      ShardMetadata::SHARD_NODE_SAVE_DATA_REPO, $dataRepo);
+  }
+
+}
+
 
 

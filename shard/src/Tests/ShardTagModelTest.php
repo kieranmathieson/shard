@@ -13,7 +13,7 @@ namespace Drupal\shard\Tests;
 //use Drupal\shard\ShardMetadata;
 //use Drupal\node\Entity\Node;
 //use Drupal\shard\ShardMetadata;
-use Drupal\shard\ShardTagModel;
+use Drupal\shard\ShardModel;
 use Drupal\simpletest\WebTestBase;
 //use Drupal\shard\Exceptions\ShardNotFoundException;
 //use Drupal\shard\Exceptions\ShardUnexpectedValueException;
@@ -46,7 +46,7 @@ class ShardTagModelTest extends WebTestBase {
   }
 
   function makeShardTagModel(){
-    $shardTagModel = new ShardTagModel(
+    $shardTagModel = new ShardModel(
       new MockMetadata(),
       \Drupal::service('entity_type.manager'),
       \Drupal::service('renderer'),

@@ -17,9 +17,9 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\field_collection\Entity\FieldCollectionItem;
 use Drupal\Core\Render\RendererInterface;
+use Drupal\Component\Uuid\Uuid;
 
-
-class ShardTagModel {
+class ShardModel {
 
 //  /**
 //   * Database connection service.
@@ -65,6 +65,14 @@ class ShardTagModel {
    * @var int
    */
   protected $shardId = NULL;
+
+  /**
+   * Placeholder used when the id is not known.
+   * A UUID.
+   *
+   * @var string
+   */
+  protected $shardPlaceHolderId = NULL;
 
   /**
    * Shard type. Same as the module name.
@@ -157,17 +165,47 @@ class ShardTagModel {
 
   /**
    * @param int $shardId
-   * @return \Drupal\shard\ShardTagModel
+   * @return \Drupal\shard\ShardModel
    * @throws \Drupal\shard\Exceptions\ShardUnexpectedValueException
    */
   public function setShardId($shardId) {
-    if ( ! $this->metadata->isValidNid($shardId) ) {
+    if ( ! $this->isValidShardId($shardId) ) {
       throw new ShardUnexpectedValueException(
         sprintf('Bad shard id: %s', $shardId)
       );
     }
     $this->shardId = $shardId;
     return $this;
+  }
+
+  public function isValidShardId($value) {
+    return is_numeric($value) && $value > 0;
+  }
+
+  /**
+   * @return string
+   */
+  public function getShardPlaceHolderId() {
+    return $this->shardPlaceHolderId;
+  }
+
+  /**
+   * @param string $value
+   * @return \Drupal\shard\ShardModel
+   * @throws \Drupal\shard\Exceptions\ShardUnexpectedValueException
+   */
+  public function setShardPlaceHolderId($value) {
+    if ( ! $this->isValidPlaceHolderId($value) ) {
+      throw new ShardUnexpectedValueException(
+        sprintf('Placeholder nid should be UUID. Got: %s', $value)
+      );
+    }
+    $this->shardPlaceHolderId = $value;
+    return $this;
+  }
+
+  public function isValidPlaceHolderId($value) {
+    return Uuid::isValid($value);
   }
 
   /**
@@ -179,7 +217,7 @@ class ShardTagModel {
 
   /**
    * @param string $shardType
-   * @return \Drupal\shard\ShardTagModel
+   * @return \Drupal\shard\ShardModel
    * @throws \Drupal\shard\Exceptions\ShardUnexpectedValueException
    */
   public function setShardType($shardType) {
@@ -201,7 +239,7 @@ class ShardTagModel {
 
   /**
    * @param int $hostNid
-   * @return \Drupal\shard\ShardTagModel
+   * @return \Drupal\shard\ShardModel
    * @throws \Drupal\shard\Exceptions\ShardUnexpectedValueException
    */
   public function setHostNid($hostNid) {
@@ -244,7 +282,7 @@ class ShardTagModel {
 
   /**
    * @param int $guestNid
-   * @return \Drupal\shard\ShardTagModel
+   * @return \Drupal\shard\ShardModel
    * @throws \Drupal\shard\Exceptions\ShardUnexpectedValueException
    */
   public function setGuestNid($guestNid) {
@@ -288,7 +326,7 @@ class ShardTagModel {
 
   /**
    * @param string $fieldName
-   * @return \Drupal\shard\ShardTagModel
+   * @return \Drupal\shard\ShardModel
    * @throws \Drupal\shard\Exceptions\ShardUnexpectedValueException
    */
   public function setHostFieldName($fieldName) {
@@ -317,17 +355,27 @@ class ShardTagModel {
 
   /**
    * @param int $delta
-   * @return \Drupal\shard\ShardTagModel
+   * @return \Drupal\shard\ShardModel
    * @throws \Drupal\shard\Exceptions\ShardUnexpectedValueException
    */
   public function setDelta($delta) {
-    if ( ! is_numeric($delta) || $delta < 0 ) {
+    if ( ! $this->isValidDelta($delta) ) {
       throw new ShardUnexpectedValueException(
         sprintf('Bad delta: %s', $delta)
       );
     }
     $this->delta = $delta;
     return $this;
+  }
+
+  /**
+   * Is a value a valid delta?
+   *
+   * @param mixed $value Value to check.
+   * @return bool True if this could be a delta.
+   */
+  public function isValidDelta($value) {
+    return is_numeric($value) && $value >= 0;
   }
 
   /**
@@ -338,17 +386,28 @@ class ShardTagModel {
   }
 
   /**
-   * @param int $location
-   * @return \Drupal\shard\ShardTagModel
+   * @param int $value
+   * @return \Drupal\shard\ShardModel
    * @throws \Drupal\shard\Exceptions\ShardUnexpectedValueException
    */
-  public function setLocation($location) {
-    if ( ! is_numeric($location) || $location < 0 ) {
+  public function setLocation($value) {
+    if ( ! $this->isValidLocation($value) ) {
       throw new ShardUnexpectedValueException(
-        sprintf('Bad location: %s', $location)
+        sprintf('Bad location: %s', $value)
       );
-    }    $this->location = $location;
+    }
+    $this->location = $value;
     return $this;
+  }
+
+  /**
+   * Is a value a valid location?
+   *
+   * @param mixed $value Value to check.
+   * @return bool True if this could be a location.
+   */
+  public function isValidLocation($value) {
+    return is_numeric($value) && $value >= 0;
   }
 
   /**
@@ -360,7 +419,7 @@ class ShardTagModel {
 
   /**
    * @param string $viewMode
-   * @return \Drupal\shard\ShardTagModel
+   * @return \Drupal\shard\ShardModel
    * @throws \Drupal\shard\Exceptions\ShardUnexpectedValueException
    */
   public function setViewMode($viewMode) {
@@ -382,7 +441,7 @@ class ShardTagModel {
 
   /**
    * @param mixed $localContent
-   * @return ShardTagModel
+   * @return ShardModel
    */
   public function setLocalContent($localContent) {
     $this->localContent = $localContent;
@@ -474,8 +533,68 @@ class ShardTagModel {
     return $value;
   }
 
-  public function saveShardToStorage() {
-
+  /**
+   * Save a new shard tag model to storage.
+   *
+   * @return int Saved Collection item's entity id.
+   * @throws \Drupal\shard\Exceptions\ShardMissingDataException
+   */
+  public function saveNewShardCollectionItem() {
+    //Check that all required data is present.
+    if ( ! $this->metadata->isValidNid($this->getGuestNid()) ) {
+      throw new ShardUnexpectedValueException(
+        sprintf('Bad guest shard id: %s', $this->getGuestNid())
+      );
+    }
+    $guestNode = $this->entityTypeManager->getStorage('node')->load(
+      $this->getGuestNid()
+    );
+    if ( ! $guestNode ) {
+      throw new ShardMissingDataException(
+        'Could not find guest node %nid', [
+        '%nid' => $this->getGuestNid()
+      ]);
+    }
+    if ( ! $this->metadata->isValidNid($this->getHostNid()) ) {
+      throw new ShardUnexpectedValueException(
+        sprintf('Bad host shard id: %s', $this->getHostNid())
+      );
+    }
+    if ( ! $this->getHostFieldName() ) {
+      throw new ShardMissingDataException('Missing field name');
+    }
+    if ( ! $this->isValidDelta($this->getDelta()) ) {
+      throw new ShardUnexpectedValueException(
+        sprintf('Bad delta: %s', $this->getDelta())
+      );
+    }
+    if ( ! $this->getViewMode() ) {
+      throw new ShardMissingDataException('Missing view mode');
+    }
+    if ( ! $this->isValidLocation($this->getLocation()) ) {
+      throw new ShardUnexpectedValueException(
+        sprintf('Bad location: %s', $this->getLocation())
+      );
+    }
+    //Create the field collection item.
+    $shardFieldCollectionItem = FieldCollectionItem::create([
+      //field_name is the bundle setting. The field collection type of the
+      //field collection entity.
+      'field_name' => 'field_shard',
+      'field_host_node' => $this->getHostNid(),
+      'field_host_field' => $this->getFieldName(),
+      'field_host_field_delta' => $this->getDelta(),
+      'field_view_mode' => $this->getViewMode(),
+      'field_shard_location' => $this->getLocation(),
+      'field_custom_content' => $this->getLocalContent(),
+    ]);
+    //"Host" here is the node containing the field collection field.
+    //Host WRT the field collection API.
+    $shardFieldCollectionItem->setHostEntity($guestNode);
+    $shardFieldCollectionItem->save();
+    $itemId = $shardFieldCollectionItem->id();
+    $this->setShardId($itemId);
+    return $itemId;
   }
 
   /**

@@ -10,6 +10,7 @@
 
 namespace Drupal\shard;
 
+use Drupal\Core\Entity\EntityInterface;
 use Drupal\node\NodeInterface;
 
 interface ShardMetadataInterface {
@@ -59,6 +60,10 @@ interface ShardMetadataInterface {
   //Class name for local content, for styling.
   const SHARD_LOCAL_CONTENT_CLASS = 'local-content';
 
+  //Config key used to store temp data while creating or updating a
+  //shardable node.
+  const SHARD_NODE_SAVE_DATA_REPO = 'shard-host-repo';
+
   /**
    * @return \string[]
    */
@@ -77,6 +82,13 @@ interface ShardMetadataInterface {
    * @return bool Is it valid?
    */
   public function isValidShardTypeName($name);
+
+  /**
+   * Get the valid view modes.
+   *
+   * @return string[] View modes
+   */
+  public function getViewModes();
 
   /**
    * Check whether nid is valid.
@@ -106,10 +118,10 @@ interface ShardMetadataInterface {
    * Return a list of the names of fields that are allowed to have
    * shards in them.
    *
-   * @param NodeInterface $node
+   * @param EntityInterface $node
    * @return array Names of fields that may have sloths embedded.
    */
-  public function listEligibleFieldsForNode(NodeInterface $node);
+  public function listEligibleFieldsForNode(EntityInterface $node);
 
   /**
    * Return a list of the names of fields that are allowed to have
@@ -123,4 +135,10 @@ interface ShardMetadataInterface {
   public function nodeHasEligibleFields(NodeInterface $node);
 
   public function stashDataInConFig($key, $data);
+
+  /**
+   * @param $key
+   * @return array|mixed|null
+   */
+  public function fetchDataFromConfig($key);
 }

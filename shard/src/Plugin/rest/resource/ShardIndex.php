@@ -1,6 +1,6 @@
 <?php
 
-namespace Drupal\sloth\Plugin\rest\resource;
+namespace Drupal\shard\Plugin\rest\resource;
 
 use Drupal\Core\Session\AccountProxyInterface;
 use Drupal\rest\Plugin\ResourceBase;
@@ -18,7 +18,7 @@ use Drupal\Core\Entity\Query\QueryFactoryInterface;
  *   id = "shard_index",
  *   label = @Translation("Get shard index"),
  *   uri_paths = {
- *     "canonical" = "/shard/index"
+ *     "canonical" = "/shard/index/{shardType}"
  *   }
  * )
  */
@@ -95,8 +95,9 @@ class ShardIndex extends ResourceBase {
    *
    * Returns a list of bundles for specified entity.
    *
-   * @throws \Symfony\Component\HttpKernel\Exception\HttpException
-   *   Throws exception expected.
+   * @param $shardType
+   * @return \Drupal\rest\ResourceResponse Throws exception expected.
+   * Throws exception expected.
    */
 //  public function get() {
 //
@@ -128,12 +129,12 @@ class ShardIndex extends ResourceBase {
 //    return new ResourceResponse($dog);
 //  }
 
-  public function get($shardTypeName) {
+  public function get($shardType) {
     if (!$this->currentUser->hasPermission('access content')) {
       throw new AccessDeniedHttpException();
     }
     $query = $this->entityQuery->get('node')
-      ->condition('type', $shardTypeName)
+      ->condition('type', $shardType)
       ->condition('status', 1)
       ->sort('title');
     $result = $query->execute();

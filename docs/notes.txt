@@ -1,37 +1,17 @@
-Presave:
-
-    For each eligible field...
-        Get html
-        Wrap in temp div
-        Put in doc
-        Get tempdiv
-        Erase existing collection items for host node
-        if new node:
-            hostnodeid=uuid
-        process div, doc, hostnodeid
+View host nodes:
+    Supply HTML for view mode
+    Respond to event, if needed. Code is in the filter.
+        After translation is finished
 
 
-process div(element, doc, hostnodeid)
-    Find first div
-    if first div:
-        Create collection field repres to array
-        if not new hostnode:
-            save collection node.
-            get guest id.
-        else
-            add field repres to array
-            create uuid for guest id.
-        Change div tag
-        in HTML, replace with DB tag
-        process div (first, doc, hostnodeid
+DB to CK:
+    Supply HTML that includes widgety class.
+    Supply server-side class for CK plugin.
+    Callbacks for dialog
+        Resty
+    Hooks:
+        After HTML preped
+        Include extra client-side files.
 
+CK to db:
 
-Postsave:
-    if new:
-        get host nid
-        foreach thing in repres
-            replace thing host id with real host id
-            get HTML for field referred to by the repres
-            in HTML, replace repres UUID with real id
-            save repres as an entity.
-        save host

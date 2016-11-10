@@ -11,16 +11,18 @@ namespace Drupal\shard\Form;
 use Drupal\Core\Entity\EntityTypeBundleInfoInterface;
 use Drupal\Core\Form\FormBase;
 use Drupal\Core\Form\FormStateInterface;
+use Drupal\shard\ShardPluginRegisterEvent;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Drupal\Core\Entity\EntityFieldManagerInterface;
 use Drupal\Core\Entity\EntityDisplayRepositoryInterface;
 use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\TypedData\TypedDataManagerInterface;
+use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 
 class ShardConfigForm extends FormBase {
 
   /* @var \Symfony\Component\DependencyInjection\ContainerInterface $container */
-  protected $container;
+//  protected $container;
   /* @var \Drupal\Core\Entity\EntityTypeBundleInfoInterface $bundle_info_manager */
   protected $bundle_info_manager;
   /* @var \Drupal\Core\Entity\EntityFieldManagerInterface $entity_field_manager */
@@ -36,29 +38,53 @@ class ShardConfigForm extends FormBase {
    */
   protected $config_factory;
 
+  /**
+   * Used to interact with sharders (modules that implement shards).
+   *
+   * @var EventDispatcherInterface
+   */
+  protected $eventDispatcher;
+
+  /**
+   * Sharders that are registering themselves.
+   *
+   * @var string[]
+   */
+  protected $registeredShardTypes;
+
   public function __construct(
-      ContainerInterface $container,
+//      ContainerInterface $container,
       EntityTypeBundleInfoInterface $bundle_info_manager,
       EntityFieldManagerInterface $entity_field_manager,
       EntityDisplayRepositoryInterface $entity_display_repository,
       ConfigFactoryInterface $config_factory,
-      TypedDataManagerInterface $typed_data_manager) {
-    $this->container = $container;
+      TypedDataManagerInterface $typed_data_manager,
+      EventDispatcherInterface $eventDispatcher
+  ) {
+//    $this->container = $container;
     $this->bundle_info_manager = $bundle_info_manager;
     $this->entity_field_manager = $entity_field_manager;
     $this->entity_display_repository = $entity_display_repository;
     $this->config_factory = $config_factory;
     $this->typed_data_manager = $typed_data_manager;
+    $this->eventDispatcher = $eventDispatcher;
+    //Ask sharders (modules that implement shards) to register.
+    $pluginRegisterEvent = new ShardPluginRegisterEvent();
+    $this->eventDispatcher->dispatch('shard.register_plugins', $pluginRegisterEvent);
+    //Send shard type names to metadata object.
+    $this->registeredShardTypes = $pluginRegisterEvent->getRegisteredPlugins();
   }
 
   public static function create(ContainerInterface $container) {
     return new static(
-      \Drupal::getContainer(),
-      \Drupal::service('entity_type.bundle.info'),
-      \Drupal::service('entity_field.manager'),
-      \Drupal::service('entity_display.repository'),
-      \Drupal::service('config.factory'),
-      \Drupal::service('typed_data_manager')
+//      \Drupal::getContainer(),
+      $container->get('entity_type.bundle.info'),
+      $container->get('entity_field.manager'),
+      $container->get('entity_display.repository'),
+      $container->get('config.factory'),
+      $container->get('typed_data_manager'),
+      $container->get('event_dispatcher')
+
     );
   }
 
@@ -91,10 +117,33 @@ class ShardConfigForm extends FormBase {
 
     //Help.
     $form['instructions'] = [
-      '#markup' => '<p>' . $this->t('Choose where you would like shards '
+      '#markup' => $this->t('Choose where you would like shards '
         . 'to be allowed. Only fields meeting all criteria can host shards.')
     ];
 
+    //List the registered shard types.
+    $form['shard_types'] = [
+      '#type' => 'details',
+      '#collapsible' => TRUE,
+      '#open' => TRUE,
+      '#title' => $this->t('Registered shard types'),
+    ];
+    $items = [];
+    foreach ($this->registeredShardTypes as $registeredShardType) {
+      $items[] = $registeredShardType;
+    }
+    if ( sizeof($items) == 0 ) {
+      $form['shard_types']['registeredSharders'] = [
+        '#markup' => $this->t('No shard types are registered.'),
+      ];
+    }
+    else {
+      $form['shard_types']['registeredSharders'] = [
+        '#theme' => 'item_list',
+        '#items' => $items,
+        '#type' => 'ul',
+      ];
+    }
     //Get the content types.
     $node_bundle_info = $this->bundle_info_manager->getBundleInfo('node');
     //Ask about content types.

@@ -5,10 +5,11 @@ namespace Drupal\shard\Plugin\rest\resource;
 use Drupal\Core\Session\AccountProxyInterface;
 use Drupal\rest\Plugin\ResourceBase;
 use Drupal\rest\ResourceResponse;
+use Drupal\shard\ShardMetadataInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 use Psr\Log\LoggerInterface;
-use Drupal\Core\Entity\EntityDisplayRepositoryInterface;
+//use Drupal\Core\Entity\EntityDisplayRepositoryInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Render\RendererInterface;
 use Drupal\shard\Exceptions\ShardMissingDataException;
@@ -35,11 +36,18 @@ class ShardPreview extends ResourceBase {
    */
   protected $currentUser;
   /* @var \Drupal\Core\Entity\EntityDisplayRepositoryInterface $entity_display_repository */
-  protected $entity_display_repository;
-  /* @var \Drupal\Core\Entity\EntityTypeManagerInterface $entity_type_manager */
-  protected $entity_type_manager;
+//  protected $entity_display_repository;
+  /* @var \Drupal\Core\Entity\EntityTypeManagerInterface $entityTypeManager */
+  protected $entityTypeManager;
   /* @var \Drupal\Core\Render\RendererInterface $renderer */
   protected $renderer;
+
+  /**
+   * Object holding metadata for fields and nodes.
+   *
+   * @var ShardMetadataInterface
+   */
+  protected $metadata;
 
   /**
    * Constructs a Drupal\rest\Plugin\ResourceBase object.
@@ -56,9 +64,10 @@ class ShardPreview extends ResourceBase {
    *   A logger instance.
    * @param \Drupal\Core\Session\AccountProxyInterface $current_user
    *   A current user instance.
-   * @param \Drupal\Core\Entity\EntityDisplayRepositoryInterface $entity_display_repository
    * @param \Drupal\Core\Entity\EntityTypeManagerInterface $entity_type_manager
    * @param \Drupal\Core\Render\RendererInterface $renderer
+   * @param \Drupal\shard\ShardMetadataInterface $metadata
+   * @internal param \Drupal\Core\Entity\EntityDisplayRepositoryInterface $entity_display_repository
    */
   public function __construct(
     array $configuration,
@@ -67,14 +76,16 @@ class ShardPreview extends ResourceBase {
     array $serializer_formats,
     LoggerInterface $logger,
     AccountProxyInterface $current_user,
-    EntityDisplayRepositoryInterface $entity_display_repository,
+//    EntityDisplayRepositoryInterface $entity_display_repository,
     EntityTypeManagerInterface $entity_type_manager,
-    RendererInterface $renderer) {
+    RendererInterface $renderer,
+    ShardMetadataInterface $metadata) {
     parent::__construct($configuration, $plugin_id, $plugin_definition, $serializer_formats, $logger);
     $this->currentUser = $current_user;
-    $this->entity_display_repository = $entity_display_repository;
-    $this->entity_type_manager = $entity_type_manager;
+//    $this->entity_display_repository = $entity_display_repository;
+    $this->entityTypeManager = $entity_type_manager;
     $this->renderer = $renderer;
+    $this->metadata = $metadata;
   }
 
   /**
@@ -88,9 +99,10 @@ class ShardPreview extends ResourceBase {
       $container->getParameter('serializer.formats'),
       $container->get('logger.factory')->get('shard'),
       $container->get('current_user'),
-      \Drupal::service('entity_display.repository'),
-      \Drupal::service('entity_type.manager'),
-      \Drupal::service('renderer')
+//      $container->get('entity_display.repository'),
+      $container->get('entity_type.manager'),
+      $container->get('renderer'),
+      $container->get('shard.metadata')
     );
   }
 
@@ -100,37 +112,44 @@ class ShardPreview extends ResourceBase {
    * Returns a list of bundles for specified entity.
    *
    * @param null $nid
-   * @param null $view_mode
+   * @param null $viewMode
    * @return \Drupal\rest\ResourceResponse Throws exception expected.
    * Throws exception expected.
    * @throws \Drupal\shard\Exceptions\ShardMissingDataException
    * @throws \Drupal\shard\Exceptions\ShardNotFoundException
    * @throws \Drupal\shard\Exceptions\ShardUnexpectedValueException
    */
-  public function get($nid = NULL, $view_mode = NULL) {
+  public function get($nid = NULL, $viewMode = NULL) {
     // Use current user after pass authentication to validate access.
     if (!$this->currentUser->hasPermission('access content')) {
       throw new AccessDeniedHttpException();
     }
     //Were both params given?
-    if ( is_null($nid) || is_null($view_mode) ) {
+    if ( is_null($nid) || is_null($viewMode) ) {
       throw new ShardMissingDataException($this->t('Missing argument getting shard display.'));
     }
     //Does the view mode exist?
-    $all_view_modes = $this->entity_display_repository->getViewModes('node');
-    if ( ! key_exists($view_mode, $all_view_modes) ) {
-      throw new ShardUnexpectedValueException($this->t('Unknown shard view mode: ' . $view_mode));
+    if ( ! $this->metadata->isValidViewModeName($viewMode) ) {
+      throw new ShardUnexpectedValueException(
+        sprintf('Invalid view mode: ', $viewMode)
+      );
     }
+//    $all_view_modes = $this->entity_display_repository->getViewModes('node');
+//    if ( ! key_exists($view_mode, $all_view_modes) ) {
+//      throw new ShardUnexpectedValueException($this->t('Unknown shard view mode: ' . $view_mode));
+//    }
     //Load the shard.
-    $shard_node = $this->entity_type_manager->getStorage('node')->load($nid);
+    $guestNode = $this->entityTypeManager->getStorage('node')->load($nid);
     //Does the shard exist?
-    if ( is_null($shard_node) ) {
-      throw new ShardNotFoundException('Cannot find shard ' . $nid);
+    if ( is_null($guestNode) ) {
+      throw new ShardNotFoundException(
+        sprintf('Cannot find shard ' . $nid)
+      );
     }
     //Render the selected display of the shard.
-    $view_builder = $this->entity_type_manager->getViewBuilder('node');
-    $render_array = $view_builder->view($shard_node, $view_mode);
-    $html = (string)$this->renderer->renderRoot($render_array);
+    $viewBuilder = $this->entityTypeManager->getViewBuilder('node');
+    $renderArray = $viewBuilder->view($guestNode, $viewMode);
+    $html = (string)$this->renderer->renderRoot($renderArray);
     return new ResourceResponse($html);
   }
 

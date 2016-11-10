@@ -15,55 +15,32 @@ use Drupal\shard\Exceptions\ShardUnexpectedValueException;
 class ShardDataRepository {
 
   /**
-   * Is this data for a new node?
-   *
-   * @var bool
-   */
-  protected $isNewNode = FALSE;
-
-  /**
    * UUID used as placeholder for new node's nid.
    *
    * @var string
    */
-  protected $newNodePlaceholderNid;
+  protected $hostPlaceholderNid = NULL;
 
   /**
-   * Ids of shard collection items to be deleted, when updating existing
-   * host node.
+   * The actual host nid. For new nodes, this replaces
+   * the placeholder UUID.
    *
-   * @var int[]
+   * @var int
    */
-  protected $oldShards;
+  protected $actualHostNid = NULL;
 
   /**
    * New shards to be created for new node.
    *
-   * @var ShardTagModel[]
+   * @var ShardModel[]
    */
-  protected $newShardCollectionItems;
-
-  /**
-   * @param boolean $isNewNode
-   * @return ShardDataRepository
-   */
-  public function setIsNewNode($isNewNode) {
-    $this->isNewNode = $isNewNode;
-    return $this;
-  }
-
-  /**
-   * @return boolean
-   */
-  public function isNewNode() {
-    return $this->isNewNode;
-  }
+  protected $newShardCollectionItems = [];
 
   /**
    * @return mixed
    */
-  public function getNewNodePlaceholderNid() {
-    return $this->newNodePlaceholderNid;
+  public function getHostPlaceholderNid() {
+    return $this->hostPlaceholderNid;
   }
 
   /**
@@ -71,31 +48,35 @@ class ShardDataRepository {
    * @return \Drupal\shard\ShardDataRepository
    * @throws \Drupal\shard\Exceptions\ShardUnexpectedValueException
    */
-  public function setNewNodePlaceholderNid($value) {
-    $isPositiveNumber = is_numeric($value) && $value > 0;
-    $isUuid = Uuid::isValid($value);
-    if ( ! $isPositiveNumber && ! $isUuid ) {
+  public function setHostPlaceholderNid($value) {
+    if ( ! Uuid::isValid($value) ) {
       throw new ShardUnexpectedValueException(
-        sprintf('Nid should be number or UUID. Got: %s', $value)
+        sprintf('Placeholder nid should be UUID. Got: %s', $value)
       );
     }
-    $this->newNodePlaceholderNid = $value;
+    $this->hostPlaceholderNid = $value;
     return $this;
   }
 
   /**
-   * @return mixed
+   * @return int
    */
-  public function getOldShards() {
-    return $this->oldShards;
+  public function getActualHostNid() {
+    return $this->actualHostNid;
   }
 
   /**
-   * @param mixed $oldShards
-   * @return ShardDataRepository
+   * @param $value
+   * @return \Drupal\shard\ShardDataRepository
+   * @throws \Drupal\shard\Exceptions\ShardUnexpectedValueException
    */
-  public function setOldShards($oldShards) {
-    $this->oldShards = $oldShards;
+  public function setActualHostNid($value) {
+    if ( ! is_numeric($value) || $value <= 0 ) {
+      throw new ShardUnexpectedValueException(
+        sprintf('Actual nid should be positive number. Got: %s', $value)
+      );
+    }
+    $this->actualHostNid = $value;
     return $this;
   }
 

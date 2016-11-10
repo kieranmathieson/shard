@@ -11,7 +11,7 @@ namespace Drupal\Tests\shard\Unit;
 use Drupal\Tests\UnitTestCase;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
-use Drupal\shard\ShardTagModel;
+use Drupal\shard\ShardModel;
 
 use Drupal\shard\Exceptions\ShardUnexpectedValueException;
 
@@ -52,7 +52,7 @@ class ShardTagModelTest extends UnitTestCase {
     $domProcessorMock = $this->getMockBuilder('Drupal\shard\ShardDomProcessor')
       ->disableOriginalConstructor()
       ->getMock();
-    $shardTagModel = new ShardTagModel(
+    $shardTagModel = new ShardModel(
       $databaseMock, $metadataMock, $entityTypeManagerMock, $rendererMock, $domProcessorMock
     );
     return $shardTagModel;
