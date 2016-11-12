@@ -53,7 +53,6 @@ class ShardIndex extends ResourceBase {
    * @param \Drupal\Core\Session\AccountProxyInterface $current_user
    *   A current user instance.
    * @param \Drupal\Core\Entity\EntityTypeManagerInterface $type_manager
-   * @param \Drupal\Core\Entity\Query\QueryFactoryInterface $entity_query
    */
   public function __construct(
     array $configuration,
@@ -62,14 +61,13 @@ class ShardIndex extends ResourceBase {
     array $serializer_formats,
     LoggerInterface $logger,
     AccountProxyInterface $current_user,
-    EntityTypeManagerInterface $type_manager,
-    QueryFactoryInterface $entity_query
+    EntityTypeManagerInterface $type_manager
 ) {
     parent::__construct($configuration, $plugin_id, $plugin_definition,
       $serializer_formats, $logger);
     $this->currentUser = $current_user;
     $this->entityTypeManager = $type_manager;
-    $this->entityQuery = $entity_query;
+    $this->entityQuery = \Drupal::service('entity.query');
     $this->nodeStorage = $this->entityTypeManager->getStorage('node');
   }
 
@@ -85,8 +83,7 @@ class ShardIndex extends ResourceBase {
       $container->getParameter('serializer.formats'),
       $container->get('logger.factory')->get('sloth'),
       $container->get('current_user'),
-      $container->get('entity_type.manager'),
-      $container->get('entity.query')
+      $container->get('entity_type.manager')
     );
   }
 

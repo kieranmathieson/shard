@@ -13,9 +13,11 @@ use Drupal\Core\Form\FormStateInterface;
 //use Drupal\views\ViewExecutable;
 //use Drupal\node\NodeInterface;
 
+use Drupal\Core\Url;
 use Drupal\shard\ShardDataRepository;
 use Drupal\shard\ShardMetadata;
 use Drupal\shard\Exceptions\ShardException;
+use Symfony\Component\HttpFoundation\RedirectResponse;
 
 /**
  * Implements hook_help().
@@ -102,10 +104,11 @@ function shard_form_alter(&$form, FormStateInterface $formState, $form_id) {
           } //It's a field instance (numeric key).
         } //End foreach widget.
       } //End foreach eligible field on the form.
-      $submitHandler = '_shard_node_edit_submit_handler';
-      $form['actions']['submit']['#submit'][] = $submitHandler;
-      $form['actions']['publish']['#submit'][] = $submitHandler;
-      $form['actions']['unpublish']['#submit'][] = $submitHandler;
+//      $submitHandler = '_shard_node_edit_submit_handler';
+//      $form['actions']['submit']['#submit'][] = $submitHandler;
+//      $form['actions']['publish']['#submit'][] = $submitHandler;
+//      $form['actions']['unpublish']['#submit'][] = $submitHandler;
+      $form['#validate'][] = '_shard_node_validate_handler';
     } //End if there are eligible fields.
   } //End this is an entity form.
 }
@@ -140,13 +143,13 @@ function shard_form_alter(&$form, FormStateInterface $formState, $form_id) {
  * @param $form
  * @param \Drupal\Core\Form\FormStateInterface $formState
  */
-function _shard_node_edit_submit_handler($form, FormStateInterface $formState) {
+function _shard_node_validate_handler($form, FormStateInterface $formState) {
   //If this is called during testing, skip it.
   if ( array_key_exists('simpletest.settings', $GLOBALS['conf']) ) {
     return;
   }
   //Can the user mess with shards?
-  if ( ! \Drupal::currentUser()->hasPermission('sample permission 1') ) {
+  if ( ! \Drupal::currentUser()->hasPermission('insert shards') ) {
     return;
   }
   $newShardCollectionItems = [];
@@ -219,9 +222,13 @@ function _shard_node_edit_submit_handler($form, FormStateInterface $formState) {
       ->setNewShardCollectionItems($newShardCollectionItems)
       ->setHostPlaceholderNid($hostNid);
     //Save it.
-    $metadata->stashDataInConFig(
-      ShardMetadata::SHARD_NODE_SAVE_DATA_REPO, $shardDataRepo);
-    $formState->setRedirect('shard.process_saved_nodes');
+    $metadata->stashStringInConFig(
+      ShardMetadata::SHARD_NODE_SAVE_DATA_REPO, $shardDataRepo->serialize());
+//    $formState->setRedirect('shard.process_saved_nodes');
+    $x = Url::fromRoute('shard.process_saved_nodes');
+    $url = $x->toString();
+    $response = new RedirectResponse($url);
+    $response->send();
   }
   else {
     //Edited existing node.
@@ -267,13 +274,19 @@ function shard_node_insert(Drupal\node\NodeInterface $node) {
   if ( $metadata->nodeHasEligibleFields($node) ) {
     //Load the existing data set.
     /* @var \Drupal\shard\ShardDataRepository $dataRepo */
-    $dataRepo = $metadata->fetchDataFromConfig(
-      ShardMetadata::SHARD_NODE_SAVE_DATA_REPO);
+    $dataRepo = new ShardDataRepository();
+    $dataRepo->unserialize(
+      $metadata->fetchStringFromConfig(
+        ShardMetadata::SHARD_NODE_SAVE_DATA_REPO
+      )
+    );
     //Add the id.
     $dataRepo->setActualHostNid($node->id());
     //Save.
-    $metadata->stashDataInConFig(
-      ShardMetadata::SHARD_NODE_SAVE_DATA_REPO, $dataRepo);
+    $metadata->stashStringInConFig(
+      ShardMetadata::SHARD_NODE_SAVE_DATA_REPO,
+      $dataRepo->serialize()
+    );
   }
 
 }

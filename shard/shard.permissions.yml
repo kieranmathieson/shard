@@ -1,4 +1,4 @@
 insert shards:
   title: 'Insert/edit shards'
   description: 'Insert/edit shards into nodes.'
-  restrict access: TRUE
+  restrict access: true

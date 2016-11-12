@@ -11,6 +11,7 @@ namespace Drupal\shard;
 use Drupal\Core\Entity\EntityDisplayRepositoryInterface;
 //use Drupal\Core\Entity\Query\QueryFactory;
 use Drupal\Core\Entity\EntityInterface;
+use Drupal\shard\Exceptions\ShardMissingDataException;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Drupal\Core\Entity\EntityTypeBundleInfoInterface;
 use Drupal\Core\Config\ConfigFactoryInterface;
@@ -19,6 +20,11 @@ use Drupal\node\NodeInterface;
 //use Drupal\Component\EventDispatcher\ContainerAwareEventDispatcher;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 use Drupal\Component\Uuid\Uuid;
+
+use Symfony\Component\Serializer\Encoder\JsonEncoder;
+use Symfony\Component\Serializer\Serializer;
+use Symfony\Component\Serializer\Encoder\XmlEncoder;
+use Symfony\Component\Serializer\Normalizer\ObjectNormalizer;
 
 class ShardMetadata implements ShardMetadataInterface {
 
@@ -88,6 +94,12 @@ class ShardMetadata implements ShardMetadataInterface {
    */
   protected $configAllowedFields = [];
 
+  /* What view modes are allowed to be shown. An array of view mode names.
+   *
+   * @var string[]
+   */
+  protected $configAllowedViewModes = [];
+
   /*  What field types are allowed to have
    * shards embedded in them. An array of field type names.
    *
@@ -155,6 +167,8 @@ class ShardMetadata implements ShardMetadataInterface {
     $this->configAllowedContentTypes = $this->shardConfigs->get('content_types');
     //Get allowed fields.
     $this->configAllowedFields = $this->shardConfigs->get('fields');
+    //Get allowed view modes.
+    $this->configAllowedViewModes = $this->shardConfigs->get('view_modes');
     //Get allowed field types.
     $this->configAllowedFieldTypes = explode(',', $this->shardConfigs->get('field_types'));
     //Ask sharders (modules that implement shards) to register.
@@ -238,7 +252,7 @@ class ShardMetadata implements ShardMetadataInterface {
    * @return bool
    */
   public function isValidViewModeName($value) {
-    return in_array($value, $this->viewModes);
+    return key_exists($value, $this->viewModes);
   }
 
   /**
@@ -247,6 +261,23 @@ class ShardMetadata implements ShardMetadataInterface {
    */
   public function isValidContentTypeName($value) {
     return in_array($value, $this->contentTypes);
+  }
+
+  /**
+   * @return array Allowed view modes.
+   */
+  public function getAllowedViewModes() {
+    return $this->configAllowedViewModes;
+  }
+
+  /**
+   * Is a field name eligible for shards?
+   *
+   * @param string $fieldName Name of the field, e.g., body
+   * @return bool True if the field is allowed.
+   */
+  public function isFieldEligible($fieldName) {
+    return in_array($fieldName, $this->configAllowedFields);
   }
 
   /**
@@ -312,21 +343,25 @@ class ShardMetadata implements ShardMetadataInterface {
 
   /**
    * @param $key
-   * @param $data
+   * @param $dataToSave
+   * @internal param $data
    */
-  public function stashDataInConFig($key, $data) {
-    /* @var \Drupal\Core\Config\Config $configSettings */
+  public function stashStringInConFig($key, $dataToSave) {
     $configSettings = $this->configFactory->getEditable('shard.settings');
-    $configSettings->set($key, $data);
+    $configSettings->set($key, $dataToSave);
     $configSettings->save();
   }
 
   /**
    * @param $key
+   * @param null $className
    * @return array|mixed|null
+   * @throws \Drupal\shard\Exceptions\ShardMissingDataException
    */
-  public function fetchDataFromConfig($key) {
+  public function fetchStringFromConfig($key) {
     $this->shardConfigs = $this->configFactory->get('shard.settings');
-    return $this->shardConfigs->get($key);
+    $savedData = $this->shardConfigs->get($key);
+    return $savedData;
   }
+
 }

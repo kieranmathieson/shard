@@ -13,34 +13,30 @@ use Drupal\Component\Uuid\Uuid;
 use Drupal\shard\Exceptions\ShardUnexpectedValueException;
 
 class ShardDataRepository {
-
   /**
-   * UUID used as placeholder for new node's nid.
+   * @var array Holds all data. In an array for easy serialization.
+   * Elements:
    *
-   * @var string
+   *  - hostPlaceholderNidU (string) UID used as placeholder for new node's nid.
+   *
+   *  - actualHostNid (int) The actual host nid. For new nodes, this replaces
+   *    the placeholder UUID.
+   *
+   *  - newShardCollectionItems (array) New shards to be created for new node.
    */
-  protected $hostPlaceholderNid = NULL;
+  protected $dataArray = [];
 
-  /**
-   * The actual host nid. For new nodes, this replaces
-   * the placeholder UUID.
-   *
-   * @var int
-   */
-  protected $actualHostNid = NULL;
-
-  /**
-   * New shards to be created for new node.
-   *
-   * @var ShardModel[]
-   */
-  protected $newShardCollectionItems = [];
+  public function __construct() {
+    $this->dataArray['hostPlaceholderNid'] = NULL;
+    $this->dataArray['actualHostNid'] = NULL;
+    $this->dataArray['newShardCollectionItems'] = NULL;
+  }
 
   /**
    * @return mixed
    */
   public function getHostPlaceholderNid() {
-    return $this->hostPlaceholderNid;
+    return $this->dataArray['hostPlaceholderNid'];
   }
 
   /**
@@ -54,7 +50,7 @@ class ShardDataRepository {
         sprintf('Placeholder nid should be UUID. Got: %s', $value)
       );
     }
-    $this->hostPlaceholderNid = $value;
+    $this->dataArray['hostPlaceholderNid'] = $value;
     return $this;
   }
 
@@ -62,7 +58,7 @@ class ShardDataRepository {
    * @return int
    */
   public function getActualHostNid() {
-    return $this->actualHostNid;
+    return $this->dataArray['actualHostNid'];
   }
 
   /**
@@ -76,7 +72,7 @@ class ShardDataRepository {
         sprintf('Actual nid should be positive number. Got: %s', $value)
       );
     }
-    $this->actualHostNid = $value;
+    $this->dataArray['actualHostNid'] = $value;
     return $this;
   }
 
@@ -84,7 +80,7 @@ class ShardDataRepository {
    * @return mixed
    */
   public function getNewShardCollectionItems() {
-    return $this->newShardCollectionItems;
+    return $this->dataArray['newShardCollectionItems'];
   }
 
   /**
@@ -92,9 +88,41 @@ class ShardDataRepository {
    * @return ShardDataRepository
    */
   public function setNewShardCollectionItems($newShardCollectionItems) {
-    $this->newShardCollectionItems = $newShardCollectionItems;
+    $this->dataArray['newShardCollectionItems'] = $newShardCollectionItems;
     return $this;
   }
 
+  /**
+   * Serializes all the data for this object into a string.
+   *
+   * @return string Serialized data.
+   */
+  public function serialize() {
+    $tempShardModels = [];
+    /* @var \Drupal\shard\ShardModel $shardCollectionItem */
+    foreach ($this->dataArray['newShardCollectionItems'] as $shardCollectionItem) {
+      $tempShardModels[] = $shardCollectionItem->serialize();
+    }
+    $this->dataArray['newShardCollectionItems'] = $tempShardModels;
+    return serialize($this->dataArray);
+  }
 
+  /**
+   * Unserialize a string into data for this object.
+   *
+   * @param string $serializedData Serialized data.
+   */
+  public function unserialize($serializedData) {
+    $this->dataArray = unserialize($serializedData);
+    $tempShardModels = [];
+    foreach($this->dataArray['newShardCollectionItems'] as $serializedItem) {
+      //shard.model service supplies a new object each time service()
+      //is called.
+      /* @var ShardModel $tempShardModel */
+      $tempShardModel = \Drupal::service('shard.model');
+      $tempShardModel->unserialize($serializedItem);
+      $tempShardModels[] = $tempShardModel;
+    }
+    $this->dataArray['newShardCollectionItems'] = $tempShardModels;
+  }
 }

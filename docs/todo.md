@@ -4,9 +4,6 @@ Timeout on AJAX calls.
 
 Compatibility with restrict HTML filter in text formats.
 
-Don't show sloth button in CK unless field is allowed to
-have sloths.
-
 data-id - why does the widget code supply this?
 
 Switch to <section> from div.
@@ -26,3 +23,10 @@ Remove sloth config?
 
 sloth_form_alter() checks for text_format in #type. Is this right? What about
 single-line text fields? Or plain text fields?
+
+When editing sloth, if the shard field is visible (as for admin), collapse it.
+
+Remove dependency on Rest UI.
+
+Client-side error handling
+

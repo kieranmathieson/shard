@@ -8,24 +8,24 @@
 
 namespace Drupal\shard;
 
-use Drupal\Component\Uuid\Uuid;
+//use Drupal\Component\Uuid\Uuid;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 //use Drupal\shard\Exceptions\ShardBadDataTypeException;
-use Drupal\shard\Exceptions\ShardException;
+//use Drupal\shard\Exceptions\ShardException;
 use Drupal\shard\Exceptions\ShardMissingDataException;
 //use Drupal\shard\Exceptions\ShardDatabaseException;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Drupal\Core\Entity\EntityInterface;
-use Drupal\Core\Entity\Query\QueryFactory;
-use Drupal\field_collection\Entity\FieldCollectionItem;
+//use Drupal\Core\Entity\Query\QueryFactory;
+//use Drupal\field_collection\Entity\FieldCollectionItem;
 use Drupal\Core\Entity\EntityDisplayRepositoryInterface;
-use Drupal\shard\Exceptions\ShardUnexpectedValueException;
+//use Drupal\shard\Exceptions\ShardUnexpectedValueException;
 //use Drupal\shard\Exceptions\ShardNotFoundException;
 use Drupal\Core\Render\RendererInterface;
 use Drupal\Component\EventDispatcher\ContainerAwareEventDispatcher;
 use Drupal\Component\Uuid\Php;
 //use Drupal\node\NodeInterface;
-use Drupal\Core\Form\FormStateInterface;
+//use Drupal\Core\Form\FormStateInterface;
 
 
 
@@ -277,7 +277,7 @@ class ShardTagHandler {
    * @param int $delta Which value of the field?
    * @return string Converted HTML.
    */
-  public function ckHtmlToDbHtml($ckHtml, $newShardCollectionItems,
+  public function ckHtmlToDbHtml($ckHtml, &$newShardCollectionItems,
                                     $hostNid, $fieldName, $delta) {
     //Wrap content in a unique tag.
     $outerWrapperTagId = $this->uuidService->generate();
@@ -294,10 +294,14 @@ class ShardTagHandler {
       $domDocument, $hostNid, $fieldName, $delta);
     //Get the new content.
     $result = $domDocument->getElementById($outerWrapperTagId);
-    $dbHtml = $domDocument->saveHTML( $result );
+    $html = $domDocument->saveHTML( $result );
     //Strip the wrapper tag.
-    preg_match('/' . preg_quote("<div id='$outerWrapperTagId'>")
-      . '(.*)\<\/div\>/msi', $dbHtml, $matches);
+    $quote = "'";
+    $dblQuote = '"';
+    $eitherQuote = '[\\' . $quote . '\\' . $dblQuote . ']';
+    $regex = '/' . "<div id={$eitherQuote}$outerWrapperTagId{$eitherQuote}>"
+      . '(.*)\<\/div\>/msi';
+    preg_match($regex, $html, $matches);
     $dbHtml = $matches[1];
     return $dbHtml;
   }
@@ -636,7 +640,12 @@ class ShardTagHandler {
     $location = $element->getLineNo();
     $localContentElement
       = $this->domProcessor->findElementWithLocalContent($element);
-    $localContent = $this->domProcessor->getElementInnerHtml($localContentElement);
+    if ( $localContentElement ) {
+      $localContent = $this->domProcessor->getElementInnerHtml($localContentElement);
+    }
+    else {
+      $localContent = '';
+    }
     //A new instance of shard.model is created on each call.
     /* @var ShardModel $shardTagModel */
     $shardTagModel = $this->container->get('shard.model');
@@ -763,8 +772,12 @@ class ShardTagHandler {
     $result = $domDocument->getElementById($outerWrapperTagId);
     $viewHtml = $domDocument->saveHTML($result);
     //Strip the wrapper tag.
-    preg_match('/' . preg_quote("<div id='$outerWrapperTagId'>")
-      . '(.*)\<\/div\>/msi', $viewHtml, $matches);
+    $quote = "'";
+    $dblQuote = '"';
+    $eitherQuote = '[\\' . $quote . '\\' . $dblQuote . ']';
+    $regex = '/' . "<div id={$eitherQuote}$outerWrapperTagId{$eitherQuote}>"
+      . '(.*)\<\/div\>/msi';
+    preg_match($regex, $viewHtml, $matches);
     $viewHtml = $matches[1];
     return $viewHtml;
   }
@@ -1031,8 +1044,12 @@ class ShardTagHandler {
     $result = $domDocument->getElementById($outerWrapperTagId);
     $ckHtml = $domDocument->saveHTML( $result );
     //Strip the wrapper tag.
-    preg_match('/' . preg_quote("<div id='$outerWrapperTagId'>")
-      . '(.*)\<\/div\>/msi', $ckHtml, $matches);
+    $quote = "'";
+    $dblQuote = '"';
+    $eitherQuote = '[\\' . $quote . '\\' . $dblQuote . ']';
+    $regex = '/' . "<div id={$eitherQuote}$outerWrapperTagId{$eitherQuote}>"
+      . '(.*)\<\/div\>/msi';
+    preg_match($regex, $ckHtml, $matches);
     $ckHtml = $matches[1];
     return $ckHtml;
   }
@@ -1041,8 +1058,6 @@ class ShardTagHandler {
    * Convert one shard tag from DB to CKEditor format.
    *
    * @param \DOMElement $parentElement The container.
-   * @throws \Drupal\shard\Exceptions\ShardNotFoundException
-   * @throws \Drupal\shard\Exceptions\ShardUnexptectedValueException
    */
   public function dbHtmlToCkHtmlProcessOneTag(\DOMElement $parentElement) {
     //Is there are shard tag in the document.
@@ -1113,7 +1128,7 @@ class ShardTagHandler {
 //      if ($local_content) {
 //        $this->insertLocalContentIntoViewHtml($view_document, $local_content);
 //      }
-      //Replace the onner tags of the DB version of the shard insertion tag with the view
+      //Replace the inner tags of the DB version of the shard insertion tag with the view
       // version, keeping the wrapper tag in place.
 //      $this->domProcessor->removeElementChildren($first);
 //      $this->domProcessor->copyElementChildren(

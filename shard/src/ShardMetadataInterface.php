@@ -91,6 +91,11 @@ interface ShardMetadataInterface {
   public function getViewModes();
 
   /**
+   * @return array Allowed view modes.
+   */
+  public function getAllowedViewModes();
+
+  /**
    * Check whether nid is valid.
    *
    * @param int $value Value to check.
@@ -115,6 +120,14 @@ interface ShardMetadataInterface {
   public function isValidContentTypeName($value);
 
   /**
+   * Is a field name eligible for shards?
+   *
+   * @param string $fieldName Name of the field, e.g., body
+   * @return bool True if the field is allowed.
+   */
+  public function isFieldEligible($fieldName);
+
+    /**
    * Return a list of the names of fields that are allowed to have
    * shards in them.
    *
@@ -134,11 +147,11 @@ interface ShardMetadataInterface {
 
   public function nodeHasEligibleFields(NodeInterface $node);
 
-  public function stashDataInConFig($key, $data);
+  public function stashStringInConFig($key, $data);
 
   /**
    * @param $key
-   * @return array|mixed|null
+   * @return string
    */
-  public function fetchDataFromConfig($key);
+  public function fetchStringFromConfig($key);
 }

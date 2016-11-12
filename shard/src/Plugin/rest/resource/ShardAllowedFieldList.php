@@ -19,14 +19,14 @@ use Drupal\Core\Entity\EntityDisplayRepositoryInterface;
  * Provides a resource to get eligible view modes.
  *
  * @RestResource(
- *   id = "shard_view_mode_list",
- *   label = @Translation("Shard view mode list"),
+ *   id = "shard_allowed_field_list",
+ *   label = @Translation("Shard allowed field list"),
  *   uri_paths = {
- *     "canonical" = "/shard/view-modes"
+ *     "canonical" = "/shard/allowed-fields"
  *   }
  * )
  */
-class ShardViewModeList extends ResourceBase {
+class ShardAllowedFieldList extends ResourceBase {
 
   /**
    * A current user instance.
@@ -118,7 +118,7 @@ class ShardViewModeList extends ResourceBase {
       throw new AccessDeniedHttpException();
     }
     /* @var string[] $viewModes */
-    $viewModes = $this->metadata->getAllowedViewModes();
+    $viewModes = $this->metadata->getAllowedF();
 //    $config_settings = $this->config_factory->get('shard.settings');
 //    $config_view_modes = $config_settings->get('view_modes');
 //    if ( sizeof($config_view_modes) == 0 ) {

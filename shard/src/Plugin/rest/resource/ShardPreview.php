@@ -129,15 +129,11 @@ class ShardPreview extends ResourceBase {
       throw new ShardMissingDataException($this->t('Missing argument getting shard display.'));
     }
     //Does the view mode exist?
-    if ( ! $this->metadata->isValidViewModeName($viewMode) ) {
+    if ( ! in_array($viewMode, $this->metadata->getAllowedViewModes()) ) {
       throw new ShardUnexpectedValueException(
-        sprintf('Invalid view mode: ', $viewMode)
+        sprintf('View mode not allowed: ', $viewMode)
       );
     }
-//    $all_view_modes = $this->entity_display_repository->getViewModes('node');
-//    if ( ! key_exists($view_mode, $all_view_modes) ) {
-//      throw new ShardUnexpectedValueException($this->t('Unknown shard view mode: ' . $view_mode));
-//    }
     //Load the shard.
     $guestNode = $this->entityTypeManager->getStorage('node')->load($nid);
     //Does the shard exist?

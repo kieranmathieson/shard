@@ -6,8 +6,6 @@
 
   "use strict";
 
-
-
   CKEDITOR.plugins.add('sloth', {
       requires: 'widget',
       icons: 'sloth',
@@ -56,8 +54,8 @@
           },
           init: function () {
             //Sloth nid
-            if (this.element.hasAttribute('data-sloth-id')) {
-              this.setData('slothId', this.element.getAttribute('data-sloth-id'));
+            if (this.element.hasAttribute('data-guest-id')) {
+              this.setData('slothId', this.element.getAttribute('data-guest-id'));
             }
             //View mode
             if (this.element.hasAttribute('data-view-mode')) {
@@ -72,7 +70,7 @@
             if (editor.SlothSpace.currentPreview) {
               this.element.setHtml(editor.SlothSpace.currentPreview);
             }
-            this.element.setAttribute('data-sloth-id', this.data.slothId);
+            this.element.setAttribute('data-guest-id', this.data.slothId);
             this.element.setAttribute('data-view-mode', this.data.viewMode);
             this.element.setAttribute('class', 'shard-sloth');
           }
@@ -86,6 +84,20 @@
         // console.log(slothButton);
 
         editor.on("instanceReady", function() {
+          //Check whether button is allowed on this field.
+          //NOTE: Not sure whether it is safe to assume that the name of
+          //editor instance will always contain the field name.
+          var re=/(.*)\[\d/g;
+          var textareaName = $(editor.element.$).attr('name');
+          var matches = re.exec(textareaName);
+          if ( ! matches[1] ) {
+            throw new Error('Shard: Field name not found');
+          }
+          var fieldName = matches[1];
+          if ( ! _.contains(drupalSettings.shard.eligibleField, fieldName) ) {
+            editor.ui.get('sloth').setState(CKEDITOR.TRISTATE_OFF);
+            return;
+          }
           //Data could already have been loaded by other instances.
           if ( Drupal.SlothSpace.collections.viewModes.length == 0 ) {
             //Disable the sloth button until the data it needs is loaded.

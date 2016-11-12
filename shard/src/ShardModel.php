@@ -330,17 +330,10 @@ class ShardModel {
    * @throws \Drupal\shard\Exceptions\ShardUnexpectedValueException
    */
   public function setHostFieldName($fieldName) {
-    //Can check field name only if bundle is known.
-    if ( $this->getHostNid() ) {
-      /* @var \Drupal\Core\Entity\EntityInterface $guestNode */
-      $hostNode = $this->loadHostNodeFromStorage();
-      $bundle = $hostNode->bundle();
-      $eligibleFields = $this->metadata->listEligibleFieldsForBundle($bundle);
-      if ( ! in_array($fieldName, $eligibleFields) ) {
-        throw new ShardUnexpectedValueException(
-          sprintf('Field name not eligible: %s', $fieldName)
-        );
-      }
+    if ( ! $this->metadata->isFieldEligible($fieldName) ) {
+      throw new ShardUnexpectedValueException(
+        sprintf('Field name not eligible: %s', $fieldName)
+      );
     }
     $this->hostFieldName = $fieldName;
     return $this;
@@ -481,6 +474,10 @@ class ShardModel {
         ShardMetadata::FIELD_NAME_HOST_NODE_ID
       )
     );
+    $this->setGuestNid($shardId);
+    /* @var \Drupal\Core\Entity\EntityInterface $guestNode */
+    $guestNode = $this->loadGuestNodeFromStorage();
+    $this->setShardType($guestNode->bundle());
     $this->setHostFieldName(
       $this->getRequiredShardValue(
         $fieldCollectionEntity,
@@ -506,7 +503,7 @@ class ShardModel {
       )
     );
     $this->setLocalContent(
-      $this->getRequiredShardValue(
+      $this->getShardValue(
         $fieldCollectionEntity,
         ShardMetadata::FIELD_NAME_LOCAL_CONTENT
       )
@@ -534,10 +531,28 @@ class ShardModel {
   }
 
   /**
-   * Save a new shard tag model to storage.
+   * Get the value of a required field from a shard. Assumes the field
+   * is single valued, so getString will be sufficient.
    *
+   * @param FieldCollectionItem $shard Field collection item
+   *        with shard insertion data.
+   * @param string $fieldName Name of the field whose value is needed.
+   * @return mixed Field's value.
+   * @throws \Drupal\shard\Exceptions\ShardMissingDataException
+   */
+  protected function getShardValue(FieldCollectionItem $shard, $fieldName) {
+    $value = '';
+    if ( $shard->{$fieldName} ) {
+      $value = $shard->{$fieldName}->getString();
+    }
+    return $value;
+  }
+
+  /**
+   * Save a new shard tag model to storage.
    * @return int Saved Collection item's entity id.
    * @throws \Drupal\shard\Exceptions\ShardMissingDataException
+   * @throws \Drupal\shard\Exceptions\ShardUnexpectedValueException
    */
   public function saveNewShardCollectionItem() {
     //Check that all required data is present.
@@ -582,7 +597,7 @@ class ShardModel {
       //field collection entity.
       'field_name' => 'field_shard',
       'field_host_node' => $this->getHostNid(),
-      'field_host_field' => $this->getFieldName(),
+      'field_host_field' => $this->getHostFieldName(),
       'field_host_field_delta' => $this->getDelta(),
       'field_view_mode' => $this->getViewMode(),
       'field_shard_location' => $this->getLocation(),
@@ -711,5 +726,44 @@ class ShardModel {
     );
   }
 
+  /**
+   * Serialize object into string.
+   *
+   * @return string Serialized data.
+   */
+  public function serialize() {
+    $data = [];
+    $data['shardId'] = $this->shardId;
+    $data['shardPlaceHolderId'] = $this->shardPlaceHolderId;
+    $data['shardType'] = $this->shardType;
+    $data['hostNid'] = $this->hostNid;
+    $data['guestNid'] = $this->guestNid;
+    $data['hostFieldName'] = $this->hostFieldName;
+    $data['delta'] = $this->delta;
+    $data['location'] = $this->location;
+    $data['viewMode'] = $this->viewMode;
+    $data['localContent'] = $this->localContent;
+    $serialized = serialize($data);
+    return $serialized;
+  }
+
+  /**
+   * Reconstruct object from serialized string.
+   *
+   * @param string $serialized Serialized data.
+   */
+  public function unserialize($serialized) {
+    $data = unserialize($serialized);
+    $this->shardId = $data['shardId'];
+    $this->shardPlaceHolderId = $data['shardPlaceHolderId'];
+    $this->shardType = $data['shardType'];
+    $this->hostNid = $data['hostNid'];
+    $this->guestNid = $data['guestNid'];
+    $this->hostFieldName = $data['hostFieldName'];
+    $this->delta = $data['delta'];
+    $this->location = $data['location'];
+    $this->viewMode = $data['viewMode'];
+    $this->localContent = $data['localContent'];
+  }
 
 }
