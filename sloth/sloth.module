@@ -33,110 +33,56 @@ function sloth_help($route_name, RouteMatchInterface $route_match) {
   }
 }
 
+//function sloth_theme($existing, $type, $theme, $path) {
+//  return array(
+//    'node__sloth__full' => array(
+//      'template' => 'node--sloth--full'
+//    ),
+//  );
+//}
+
+//function sloth_theme_registry_alter(&$theme_registry) {
+//  $theme_registry['node__sloth__full']['path']
+//    = drupal_get_path('module', 'sloth') . '/templates/node--sloth--full';
+//}
 
 /**
- * Implements hook_form_alter().
+ * Implements hook_preprocess().
+ *
+ * See https://www.drupal.org/node/2499827
  */
-//function sloth_form_alter(&$form, FormStateInterface $form_state, $form_id) {
-//  //Is this a form for an entity?
-//  if ( method_exists($form_state->getFormObject(), 'getEntity') ) {
-//    //Aye.
-//    //Get the fields that are eligible to be slothed.
-//    /* @var \Drupal\shard\ShardMetadata $metadata  */
-//    $metadata = \Drupal::service('shard.metadata');
-//    $eligible_field_names = $metadata->listEligibleFieldsForNode(
-//      $form_state->getFormObject()->getEntity()
-//    );
-//    //What eligible fields are on the form?
-//    $eligible_fields_on_form = [];
-//    foreach( $eligible_field_names as $eligible_field_name ) {
-//      if ( isset( $form[$eligible_field_name] ) ) {
-//        $eligible_fields_on_form[] = $eligible_field_name;
-//      }
+function sloth_preprocess(&$variables, $hook, &$info) {
+  if ( $hook == 'node' ) {
+    $contentTypeToShow = $variables['node']->bundle();
+    if ($contentTypeToShow == 'sloth') {
+      //Load the view mode names.
+      $allViewModes = \Drupal::service('entity_display.repository')
+        ->getViewModes('node');
+      //View mode for this request.
+      $viewModeToUse = $variables['view_mode'];
+      //Is the view mode defined for nodes?
+      if (key_exists($viewModeToUse, $allViewModes)) {
+        //Is there a template file for the view modes in the module?
+        $templateFileName = 'node-' . $contentTypeToShow . '-' . $viewModeToUse;
+        $templateFilePath = drupal_get_path('module', 'sloth') . '/templates/'
+          . $templateFileName . '.html.twig';
+        if (file_exists($templateFilePath)) {
+          $info['theme path'] = drupal_get_path('module', 'sloth');
+          $info['path'] = drupal_get_path('module', 'sloth') . '/templates';
+          $info['template'] = $templateFileName;
+        } //End template file exists.
+      } //End view mode exists.
+    } //End this is a sloth.
+  } //End this is a node.
+}
+
+//function sloth_preprocess(&$variables, $hook, &$info) {
+//  if ($hook == 'node' && $variables['node']->bundle() == 'sloth'
+//    && $variables['view_mode'] == 'full') {
+//    if (substr($info['theme path'], 0, 7) != 'themes/') {
+//      $info['theme path'] = drupal_get_path('module', 'sloth');
+//      $info['path'] = drupal_get_path('module', 'sloth') . '/templates';
+//      $info['template'] = 'node--sloth--full';
 //    }
-//    //Are there any eligible fields on the form?
-//    if ( sizeof($eligible_fields_on_form) > 0 ) {
-//      //Attach JS setting to show that this field is eligible.
-//      $form['#attached']['drupalSettings']['sloth']['eligibleField']
-//        = $eligible_fields_on_form;
-//      //Convert the sloth tags from DB format to CK format.
-//      $container = \Drupal::getContainer();
-//      $shard_tag_handler = \Drupal::service('shard.tag_handler');
-//      //For each field...
-//      foreach( $eligible_fields_on_form as $field_name ) {
-//        //For each instance...
-//        foreach($form[$field_name]['widget'] as $instance_index=>$instance_data) {
-//          //There are many keys, not just instance indexes. Just do the numeric ones.
-//          if ( is_numeric($instance_index) ) {
-//            //Is this a formatted text field?
-//            if ( $instance_data['#type'] == 'text_format' ) {
-//              //Is there default data?
-//              if (isset($instance_data['#default_value']) && $instance_data['#default_value'] ) {
-//                //Convert it.
-//                $dbHtml = $instance_data['#default_value'];
-//                $ck_html = $shard_tag_handler->dbHtmlToCkHtml($dbHtml);
-//                $form[$field_name]['widget'][$instance_index]['#default_value'] = $ck_html;
-//              }
-//              //Is there a summary field?
-//              if ( isset($instance_data['summary']['#default_value'])
-//                    && $instance_data['summary']['#default_value'] ) {
-//                //Convert it.
-//                $dbHtml = $instance_data['summary']['#default_value'];
-//                $ck_html = $shard_tag_handler->dbHtmlToCkHtml($dbHtml);
-//                $form[$field_name]['widget'][$instance_index]['summary']['#default_value'] = $ck_html;
-//
-//              }
-//            } //End the field is text_format type.
-//          } //It's a field instance (numeric key).
-//        } //End foreach widget.
-//      } //End foreach eligible field on the form.
-//    } //End if there are eligible fields.
-//  } //End this is an entity form.
-//}
-
-
-//function sloth_replace_tags_in_form_fields($form, &$form_state) {
-//  $container = \Drupal::getContainer();
-//  $shard_tag_handler = new SlothTagHandler(
-////    \Drupal::service('sloth.eligible_fields'),
-//    $container->get('entity_type.manager'),
-//    $container->get('entity_display.repository'),
-//    $container->get('entity.query'),
-//    $container->get('renderer'),
-//    $container->get('database')
-//  );
-//  $shard_tag_handler->entityCkTagsToDbTags($form_state);
-//}
-//
-//function sloth_remove_shards_on_delete($form, &$form_state) {
-//  drupal_set_message('delete');
-//}
-//
-//function sloth_node_presave(Drupal\Core\Entity\EntityInterface $entity) {
-//  $container = \Drupal::getContainer();
-//  $shard_tag_handler = new SlothTagHandler(
-//    $container->get('entity_type.manager'),
-//    $container->get('entity_display.repository'),
-//    $container->get('entity.query'),
-//    $container->get('renderer'),
-//    $container->get('database')
-//  );
-//  $shard_tag_handler->entityCkTagsToDbTags($entity);
-//}
-//
-//
-//function sloth_node_insert(Drupal\Core\Entity\EntityInterface $entity) {
-//  if ( isset($_REQUEST['temp_nid']) ) {
-//    $container = \Drupal::getContainer();
-//    $shard_tag_handler = new SlothTagHandler(
-//      $container->get('entity_type.manager'),
-//      $container->get('entity_display.repository'),
-//      $container->get('entity.query'),
-//      $container->get('renderer'),
-//      $container->get('database')
-//    );
-//    $shard_tag_handler->replaceTempNid($entity);
 //  }
 //}
-
-

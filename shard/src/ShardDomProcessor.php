@@ -431,7 +431,8 @@ class ShardDomProcessor implements ShardDomProcessorInterface {
   public function loadDomDocumentFromHtml(\DOMDocument $document, $html ) {
     libxml_use_internal_errors(true);
     try {
-      $document->loadHTML($html);
+      //Hack to get UTF-8, otherwise get strange chars from ISO-8859-1 encoding.
+      $document->loadHTML('<?xml encoding="UTF-8">' . $html);
     } catch (\Exception $e) {
     }
     $message = '';

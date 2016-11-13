@@ -22,12 +22,12 @@ use Drupal\Core\Entity\EntityDisplayRepositoryInterface;
 //use Drupal\shard\Exceptions\ShardUnexpectedValueException;
 //use Drupal\shard\Exceptions\ShardNotFoundException;
 use Drupal\Core\Render\RendererInterface;
-use Drupal\Component\EventDispatcher\ContainerAwareEventDispatcher;
+//use Drupal\Component\EventDispatcher\ContainerAwareEventDispatcher;
 use Drupal\Component\Uuid\Php;
 //use Drupal\node\NodeInterface;
 //use Drupal\Core\Form\FormStateInterface;
 
-
+use Symfony\Component\EventDispatcher\EventDispatcher;
 
 class ShardTagHandler {
 
@@ -86,7 +86,7 @@ class ShardTagHandler {
   /**
    * Used to interact with sharders (modules that implement shards).
    *
-   * @var ContainerAwareEventDispatcher
+   * @var EventDispatcher
    */
   protected $eventDispatcher;
 
@@ -107,21 +107,19 @@ class ShardTagHandler {
    * @param \Drupal\Core\Entity\EntityTypeManagerInterface $entity_type_manager
    * @param \Drupal\Core\Entity\EntityDisplayRepositoryInterface $entity_display_repository
    * @param \Drupal\Core\Render\RendererInterface $renderer
-   * @param \Drupal\Component\EventDispatcher\ContainerAwareEventDispatcher $eventDispatcher
+   * @param EventDispatcher $eventDispatcher
    * @param \Drupal\Component\Uuid\Php $uuidService
-   * @internal param \Drupal\Core\Entity\Query\QueryFactoryInterface $entity_query
-   * @internal param \Drupal\Core\Config\ConfigFactoryInterface $configFactory
    */
   public function __construct(
-                       ContainerInterface $container,
+//                       ContainerInterface $container,
                        ShardMetadataInterface $metadata,
                        ShardDomProcessorInterface $domProcessor,
                        EntityTypeManagerInterface $entity_type_manager,
                        EntityDisplayRepositoryInterface $entity_display_repository,
                        RendererInterface $renderer,
-                       ContainerAwareEventDispatcher $eventDispatcher,
+                       EventDispatcher $eventDispatcher,
                        Php $uuidService) {
-    $this->container = $container;
+//    $this->container = $container;
     $this->metadata = $metadata;
     $this->domProcessor = $domProcessor;
     $this->entityTypeManager = $entity_type_manager;
@@ -139,13 +137,13 @@ class ShardTagHandler {
    */
   public static function create(ContainerInterface $container) {
     return new static(
-      $container,
+//      $container,
       $container->get('shard.metadata'),
       $container->get('shard.dom_processor'),
       $container->get('entity_type.manager'),
       $container->get('entity_display.repository'),
       $container->get('renderer'),
-      $container->get('event-dispatcher'),
+      $container->get('shard.event-dispatcher'),
       $container->get('uuid')
     );
   }
@@ -648,7 +646,7 @@ class ShardTagHandler {
     }
     //A new instance of shard.model is created on each call.
     /* @var ShardModel $shardTagModel */
-    $shardTagModel = $this->container->get('shard.model');
+    $shardTagModel = \Drupal::service('shard.model');
     $shardTagModel
       ->setGuestNid($guestNid)
       ->setHostNid($hostNid)

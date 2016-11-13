@@ -11,7 +11,7 @@ namespace Drupal\shard;
 use Drupal\Core\Entity\EntityDisplayRepositoryInterface;
 //use Drupal\Core\Entity\Query\QueryFactory;
 use Drupal\Core\Entity\EntityInterface;
-use Drupal\shard\Exceptions\ShardMissingDataException;
+//use Drupal\shard\Exceptions\ShardMissingDataException;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Drupal\Core\Entity\EntityTypeBundleInfoInterface;
 use Drupal\Core\Config\ConfigFactoryInterface;
@@ -21,10 +21,6 @@ use Drupal\node\NodeInterface;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 use Drupal\Component\Uuid\Uuid;
 
-use Symfony\Component\Serializer\Encoder\JsonEncoder;
-use Symfony\Component\Serializer\Serializer;
-use Symfony\Component\Serializer\Encoder\XmlEncoder;
-use Symfony\Component\Serializer\Normalizer\ObjectNormalizer;
 
 class ShardMetadata implements ShardMetadataInterface {
 
@@ -354,7 +350,6 @@ class ShardMetadata implements ShardMetadataInterface {
 
   /**
    * @param $key
-   * @param null $className
    * @return array|mixed|null
    * @throws \Drupal\shard\Exceptions\ShardMissingDataException
    */

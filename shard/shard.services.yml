@@ -14,7 +14,7 @@ services:
     class: Drupal\shard\ShardUtilities
   shard.tag_handler:
     class: Drupal\shard\ShardTagHandler
-    arguments: ['@service_container', '@shard.metadata', '@shard.dom_processor', '@entity_type.manager', '@entity_display.repository', '@renderer', '@event_dispatcher', '@uuid']
+    arguments: ['@shard.metadata', '@shard.dom_processor', '@entity_type.manager', '@entity_display.repository', '@renderer', '@shard.event_dispatcher', '@uuid']
   shard.model:
     class: Drupal\shard\ShardModel
     arguments: ['@shard.metadata', '@entity_type.manager', '@renderer', '@shard.dom_processor']
