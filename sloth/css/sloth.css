@@ -2,3 +2,18 @@
  * @file
  * Classes for the sloth module.
  */
+.sloth-embed {
+    -webkit-border-radius: 8px;
+    -moz-border-radius: 8px;
+    border-radius: 8px;
+    border: 2px gray;
+    padding: 8px;
+}
+.sloth-photo {
+    float: left;
+    margin-right: 5px;
+    margin-bottom: 5px;
+}
+.sloth-notes {
+    clear: left;
+}

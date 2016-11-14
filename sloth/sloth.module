@@ -70,6 +70,8 @@ function sloth_preprocess(&$variables, $hook, &$info) {
           $info['theme path'] = drupal_get_path('module', 'sloth');
           $info['path'] = drupal_get_path('module', 'sloth') . '/templates';
           $info['template'] = $templateFileName;
+          $variables['dog'] = 'Oscar';
+          $variables['goats'] = ['Bilil', 'Fran'];
         } //End template file exists.
       } //End view mode exists.
     } //End this is a sloth.

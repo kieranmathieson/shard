@@ -273,6 +273,29 @@ class ShardDomProcessor implements ShardDomProcessorInterface {
       ShardMetadata::SHARD_TAG_HAS_BEEN_PROCESSED_VALUE
     );
   }
+
+  /**
+   * Remove attributes showing that shard tags have been processed,
+   * within an element.
+   *
+   * @param \DOMElement $element Element to look in
+   */
+  public function stripProcessedMarkers(\DOMElement $element) {
+    if ( $element->tagName == 'div' ) {
+      if ( $element->hasAttribute(ShardMetadata::SHARD_TAG_BEEN_PROCESSED_ATTRIBUTE) ) {
+        if ($element->getAttribute(ShardMetadata::SHARD_TAG_BEEN_PROCESSED_ATTRIBUTE) == ShardMetadata::SHARD_TAG_HAS_BEEN_PROCESSED_VALUE) {
+          $element->removeAttribute(ShardMetadata::SHARD_TAG_BEEN_PROCESSED_ATTRIBUTE);
+        }
+      }
+    }
+    foreach( $element->childNodes as $child ) {
+      if ( get_class($child) == 'DOMElement' ) {
+        $this->stripProcessedMarkers($child);
+      }
+    }
+  }
+
+
   /**
    * Is a shard a known type?
    *

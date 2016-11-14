@@ -73,7 +73,29 @@
  */
 #}
 
-<h2>DOGZ are the best!</h2>
+
+
+<p>Best: {{ dog }}</p>
+
+<p>goats:</p>
+<ul>
+  {% for item in goats %}
+    <li>{{ item }}</li>
+  {% endfor %}
+</ul>
+
+  {{ goats }}</p>
+
+<h2>sdf awd {{ node.field_cuteness.value }}</h2>
+
+<p>{{ node.field_cuteness.value }}</p>
+
+<p>**{{ content.field_cuteness[0]['#markup'] }}**</p>
+
+<p>{{ content.field_photo.uri }}</p>
+
+
+<h2>DOGZ are the best!!!!!!!</h2>
 
 <article{{ attributes }}>
 

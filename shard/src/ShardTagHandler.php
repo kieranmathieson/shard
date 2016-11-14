@@ -28,6 +28,7 @@ use Drupal\Component\Uuid\Php;
 //use Drupal\Core\Form\FormStateInterface;
 
 use Symfony\Component\EventDispatcher\EventDispatcher;
+use Drupal\shard\ShardModel;
 
 class ShardTagHandler {
 
@@ -149,115 +150,6 @@ class ShardTagHandler {
   }
 
   /**
-   * Convert shard tags from their CKEditor version to their DB storage
-   * version for all eligible fields in $entity. Called by a hook in
-   * the .module file. Return data to be used by later hooks.
-   *
-   * @param \Drupal\Core\Form\FormStateInterface $formState
-   *
-   */
-//  public function formCkTagsToDbTags( FormStateInterface $formState ) {  //EntityInterface $hostNode) {
-//    $newShardCollectionItems = [];
-//    $oldShards = [];
-//    /* @var \Drupal\Core\Entity\EntityInterface|\Drupal\node\NodeInterface $hostNode; */
-//    $hostNode = $formState->getFormObject()->getEntity();
-//    $isNewNode = $hostNode->isNew();
-//    if ( $isNewNode ) {
-//      //Use a temporary fake nid. It will be replaced when the real nid is
-//      //available.
-//      $hostNid = $this->uuidService->generate();
-//    }
-//    else {
-//      //This is an existing node, with an nid.
-//      //Get the nid of the node containing the references.
-//      $hostNid = $hostNode->id();
-//      //Get the ids of shard collection items that refer to the host node.
-//      //They'll be erased later.
-//      $oldShards = $this->getShardItemIdsForHostNode($hostNid);
-//    }
-//    //Get the names of the fields that are eligible for shards.
-//    $eligibleFields = $this->metadata->listEligibleFieldsForNode($hostNode);
-//    foreach($eligibleFields as $fieldName) {
-//      try {
-//        $fieldValues = $formState->getValue($fieldName);
-//        //Does the field exist on the form?
-//        if ( $fieldValues ) {
-//          //Loop over each value for this field (could be multivalued).
-//          for ($delta = 0; $delta < sizeof($fieldValues); $delta++) {
-//            //Translate the HTML.
-//            //This will also update the field collection in the shards' nodes
-//            //to show the shards' insertion into the host nodes.
-//            //For existing host nodes, the data will be saved during
-//            //this process.
-//            //For new nodes, the data on field collections will be stored,
-//            //and used later once the nid of the host is known. That data
-//            //is stored in $newShardCollectionItems.
-//            $fieldValues[$delta]['value'] = $this->ckHtmlToDbHtml(
-//              $fieldValues[$delta]['value'], //The HTML to process.
-//              $newShardCollectionItems, //Shard collection item data.
-//              $hostNid,
-//              $fieldName,
-//              $delta
-//            );
-//          } //End foreach value of the field
-//          //Store the changed data.
-//          $formState->setValue($fieldName, $fieldValues);
-//        }
-//      } catch (ShardException $e) {
-//        $message = t(
-//          'Problem detected during shard processing for the field %field. '
-//          . 'It has been recorded in the log. Deets:', ['%field' => $fieldName])
-//          . '<br><br>' . $e->getMessage();
-//        drupal_set_message($message, 'error');
-//        \Drupal::logger('shards')->error($message);
-//      }
-//    } // End for each eligible field.
-//    //Create holder for the collected data. Passed back to module,
-//    //which uses it in later processing.
-//    $shardDataRepo = new ShardDataRepository();
-//    //Fill it.
-//    $shardDataRepo
-//      ->setIsNewNode($hostNode->isNew())
-//      ->setNewNodePlaceholderNid($hostNid)
-//      ->setOldShards($oldShards)
-//      ->setNewShardCollectionItems($newShardCollectionItems);
-//    //Save it.
-//    $this->metadata->stashDataInConFig('new-node-repo', $shardDataRepo);
-//  }
-
-  /**
-   * Get the ids of the shard collection items that refer to a host nid.
-   *
-   * @param int $hostNid Host nid to look for.
-   * @return int[] Ids.
-   */
-//  protected function getShardItemIdsForHostNode($hostNid){
-//    $query = $this->entityQuery->get('field_collection_item')
-//      ->condition('field_host_node', $hostNid);
-//    $result = $query->execute();
-//    return $result;
-//  }
-
-
-
-
-//  public function replaceTempNid(EntityInterface $entity) {
-//    //Get the nid used, and the one to replace it with.
-//    $real_nid = $entity->id();
-//    $temp_nid = $_REQUEST['temp_nid'];
-//    //Get all the field collection items that reference the temp nid.
-//    $query = $this->entityQuery->get('field_collection_item')
-//      ->condition('field_name', 'field_shard')
-//      ->condition('field_host_node', $temp_nid);
-//    $result = $query->execute();
-//    $nodes = $this->$this->nodeStorage->loadMultiple($result);
-//    foreach($nodes as $node) {
-//      $node->field_host_node->value = $real_nid;
-//      $node->save();
-//    }
-//  }
-
-  /**
    * Convert the shard tags in some HTML code from CKEditor
    * format to DB format. This is called by hooks in the module
    * file. When the node is new, shard data can't be saved until
@@ -273,10 +165,13 @@ class ShardTagHandler {
    *        a UUID (new nodes).
    * @param string $fieldName Name of the field being processed.
    * @param int $delta Which value of the field?
+   * @param int $numTagsProcessed Number of shard tags processed for this HTML.
    * @return string Converted HTML.
    */
   public function ckHtmlToDbHtml($ckHtml, &$newShardCollectionItems,
-                                    $hostNid, $fieldName, $delta) {
+                                    $hostNid, $fieldName, $delta, &$numTagsProcessed) {
+    //No tags processed yet.
+    $numTagsProcessed = 0;
     //Wrap content in a unique tag.
     $outerWrapperTagId = $this->uuidService->generate();
     $ckHtml = "<div id='$outerWrapperTagId'>$ckHtml</div>";
@@ -289,7 +184,9 @@ class ShardTagHandler {
     //Will recurse while there are more.
     $this->ckHtmlToDbHtmlProcessOneTag(
       $wrapperDiv, $newShardCollectionItems,
-      $domDocument, $hostNid, $fieldName, $delta);
+      $hostNid, $fieldName, $delta, $numTagsProcessed);
+    //Strip out indicators that tags are processed.
+    $this->domProcessor->stripProcessedMarkers($wrapperDiv);
     //Get the new content.
     $result = $domDocument->getElementById($outerWrapperTagId);
     $html = $domDocument->saveHTML( $result );
@@ -316,12 +213,12 @@ class ShardTagHandler {
    * @param $hostNid
    * @param $fieldName
    * @param $delta
+   * @param int $numTagsProcessed Number of shard tags processed for this HTML.
    */
   protected function ckHtmlToDbHtmlProcessOneTag(
       \DOMElement $elementToProcess,
       &$newShardCollectionItems,
-      \DOMDocument $domDocument,
-      $hostNid, $fieldName, $delta) {
+      $hostNid, $fieldName, $delta, &$numTagsProcessed) {
     //Find the first unprocessed child shard tag
     /* @var \DOMElement $first */
     $first = $this->domProcessor->findFirstUnprocessedShardTag($elementToProcess);
@@ -355,132 +252,15 @@ class ShardTagHandler {
       $this->domProcessor->removeElementChildren($first);
       //Add local content.
       $this->insertLocalContentDb($first, $shardTagModel->getLocalContent());
+      //Mark as processed.
+      $this->domProcessor->markShardAsProcessed($first);
+      //Increment processed tag count.
+      $numTagsProcessed++;
       //Process next tag.
-      $this->ckHtmlToDbHtmlProcessOneTag($first, $newShardCollectionItems,
-        $domDocument, $hostNid, $fieldName, $delta);
+      $this->ckHtmlToDbHtmlProcessOneTag($elementToProcess, $newShardCollectionItems,
+        $hostNid, $fieldName, $delta, $numTagsProcessed);
     } // End if found a shard to process.
   }
-
-//  /**
-//   * Add data about a shard tag to a cache object, used as a convenient
-//   * holding place. A bag of (shard) holding.
-//   * @param \DOMElement $element The shard shard tag.
-//   */
-//  protected function cacheTagDetails(\DOMElement $element) {
-//    //Get the shard's view mode.
-//    $this->shardInsertionDetails->setViewMode( $this->getViewModeOfElement($element) );
-//    //Get the shard's nid.
-//    $this->shardInsertionDetails->setShardNid( $this->getShardNid($element) );
-//    //Get the shard's location.
-//    $this->shardInsertionDetails->setLocation( $element->getLineNo() );
-//    //Get the shard's local content container.
-//    /* @var \DOMElement $local_content_container */
-//    $local_content_container = $this->findElementWithLocalContent($element);
-//    if ( $local_content_container ) {
-//      //Get its HTML.
-//      $local_html = $this->getDomElementInnerHtml($local_content_container);
-//    }
-//    else {
-//      $local_html = '';
-//    }
-//    $this->shardInsertionDetails->setLocalContent($local_html);
-//  }
-
-//  /**
-//   * Get the HTML represented by a DOMElement.
-//   *
-//   * @param \DOMElement $element The element.
-//   * @return string HTML The HTML.
-//   */
-//  protected function getDomElementOuterHtml(\DOMElement $element) {
-//    $tmp_doc = new \DOMDocument();
-//    //Make sure there's a body element.
-//    if ( $element->tagName != 'body' && $element->getElementsByTagName('body')->length == 0 ) {
-//      $tmp_doc->appendChild( $tmp_doc->createElement('body') );
-//      $body = $tmp_doc->getElementsByTagName('body')->item(0);
-//      $body->appendChild($tmp_doc->importNode($element, TRUE));
-//    }
-//    else {
-//      $tmp_doc->appendChild($tmp_doc->importNode($element, TRUE));
-//    }
-//    $html = $tmp_doc->saveHTML( $tmp_doc->getElementsByTagName('body')->item(0) );
-//    preg_match("/\<body\>(.*)\<\/body\>/msi", $html, $matches);
-//    $html = $matches[1];
-//    return $html;
-//  }
-
-//  /**
-//   * Get the inner HTML (i.e., HTML of the children) of a DOM element.
-//   *
-//   * @param \DOMElement $element Element to process.
-//   * @return string The HTML.
-//   */
-//  protected function getDomElementInnerHtml(\DOMElement $element){
-//    $result = '';
-//    foreach( $element->childNodes as $child ) {
-//      if ( get_class($child) == 'DOMText' ) {
-//        $result .= $child->wholeText;
-//      }
-//      else {
-//        $result .= $this->getDomElementOuterHtml($child);
-//      }
-//    }
-//    return $result;
-//  }
-//
-//  /**
-//   * Return first element with a given class.
-//   * @param \DOMNodeList $elements
-//   * @param string $class Class to find.
-//   * @return \DOMElement|false Element with class.
-//   */
-//  protected function findFirstWithClass(\DOMNodeList $elements, $class) {
-//    return $this->findFirstWithAttribute($elements, 'class', $class);
-//  }
-//
-//  /**
-//   * Remove all of the children from a DOM element.
-//   *
-//   * @param  \DOMElement $element
-//   */
-//  protected function removeElementChildren(\DOMElement $element) {
-//    $children = [];
-//    if ( $element->hasChildNodes() ) {
-//      foreach ( $element->childNodes as $child_node ){
-//        $children[] = $child_node;
-//      }
-//      foreach ( $children as $child ) {
-//        $element->removeChild($child);
-//      }
-//    }
-//  }
-
-//  /**
-//   * Find the local content from a shard tag in CK format.
-//   *
-//   * @param \DOMElement $element Element to search for local content.
-//   * @return string Local content. Empty if none.
-//   */
-//  protected function getLocalContentFromCkTag(\DOMElement $element ) {
-//    //Get the shard's local content.
-//    /* @var \DOMNodeList $internal_divs */
-//    $internal_divs = $element->getElementsByTagName('div');
-//    /* @var \DOMElement $internal_div */
-//    foreach ($internal_divs as $internal_div) {
-//      if ($internal_div->hasAttribute('class')) {
-//        $classes = $internal_div->getAttribute('class');
-//        if (strpos($classes, 'local-content') !== FALSE) {
-//          $result = '';
-//          /* @var \DOMNode $child */
-//          foreach ($internal_div->childNodes as $child) {
-//            $result .= trim($child->C14N());
-//          }
-//          return $result;
-//        }
-//      }
-//    } //End foreach
-//    return '';
-//  }
 
   /**
    * Inside an element, append a wrapper div with the class local-content,
@@ -510,58 +290,6 @@ class ShardTagHandler {
       $element->appendChild($local_content_wrapper);
     }
   }
-
-//  /**
-//   * Get the view mode of the element.
-//   *
-//   * @param \DOMElement $element
-//   * @return string View mode.
-//   * @throws \Drupal\shard\Exceptions\ShardMissingDataException
-//   */
-//  protected function getViewModeOfElement(\DOMElement $element) {
-//    $view_mode = $element->getAttribute('data-view-mode');
-//    if ( ! $view_mode ) {
-//      throw new ShardMissingDataException(
-//        'Could not find view mode for shard in %nid',
-//        ['%nid' => $this->shardInsertionDetails->getHostNid() ]
-//      );
-//    }
-//    return $view_mode;
-//  }
-//
-//  /**
-//   * Get the shard nid from a shard element.
-//   *
-//   * @param \DOMElement $element
-//   * @return int Nid.
-//   * @throws \Drupal\shard\Exceptions\ShardMissingDataException
-//   */
-//  protected function getShardNid(\DOMElement $element) {
-//    $nid = $element->getAttribute('data-shard-id');
-//    if ( ! $nid ) {
-//      throw new ShardMissingDataException(
-//        'Could not find id for shard in %nid',
-//        ['%nid' => $this->shardInsertionDetails->getHostNid() ]
-//      );
-//    }
-//    return $nid;
-//  }
-
-//  /**
-//   * Strip the attributes of an element.
-//   *
-//   * @param \DOMElement $element
-//   */
-//  protected function stripAttributes(\DOMElement $element) {
-//    $attributes = $element->attributes;
-//    $attribute_names = [];
-//    foreach( $attributes as $attribute => $value ) {
-//      $attribute_names[] = $attribute;
-//    }
-//    foreach ($attribute_names as $attribute_name) {
-//      $element->removeAttribute($attribute_name);
-//    }
-//  }
 
   /**
    * Called during presave data for a host entity. Load its original. Find all instances
@@ -659,92 +387,6 @@ class ShardTagHandler {
     return $shardTagModel;
   }
 
-//  /**
-//   * Save a shard tag model to storage.
-//   *
-//   * @param ShardTagModel $shardTagModel The model.
-//   * @return int Saved Collection item's entity id.
-//   * @throws \Drupal\shard\Exceptions\ShardMissingDataException
-//   */
-//  function saveShardCollectionItem($shardTagModel) {
-//
-//    $shard = $this->entityTypeManager->getStorage('node')->load(
-//      $this->shardInsertionDetails->getShardNid()
-//    );
-//    if ( ! $shard ) {
-//      throw new ShardMissingDataException(
-//        'Could not find shard %nid', [
-//          '%nid' => $this->shardInsertionDetails->getShardNid()
-//      ]);
-//    }
-//    $shard_record = FieldCollectionItem::create([
-//      //field_name is the bundle setting. The field collection type of the
-//      //field collection entity.
-//      'field_name' => 'field_shard',
-//      'field_host_node' => $this->shardInsertionDetails->getHostNid(),
-//      'field_host_field' => $this->shardInsertionDetails->getFieldName(),
-//      'field_host_field_delta' => $this->shardInsertionDetails->getDelta(),
-//      'field_view_mode' => $this->shardInsertionDetails->getViewMode(),
-//      'field_shard_location' => $this->shardInsertionDetails->getLocation(),
-//      'field_custom_content' => $this->shardInsertionDetails->getLocalContent(),
-//    ]);
-//    $shard_record->setHostEntity($shard);
-//    $shard_record->save();
-//    $item_id = $shard_record->id();
-//    return $item_id;
-//  }
-
-  /**
-   * Convert shard tags from their database version to their display
-   * version for all eligible fields in $entity. Do this for the
-   * $build array that's passed to hook_node_view_alter().
-   * @param $build
-   * @param \Drupal\Core\Entity\EntityInterface $entity
-   */
-//  public function dbTagsToViewTags(&$build, EntityInterface $entity) {
-//    //Get the names of the fields that are eligible for shards.
-//    $eligible_fields = $this->eligibleFields->listEntityEligibleFields($entity);
-//    foreach($eligible_fields as $field_name) {
-//      try {
-//        //Is there a build element for the eligible field?
-//        if ( isset($build[$field_name]) ) {
-//          if ( isset($build[$field_name]['#field_type']) ) {
-//            $field_type = $build[$field_name]['#field_type'];
-//            //Loop over the array elements for the field. The ones that have
-//            //numeric indexes are values.
-//            foreach ( $build[$field_name] as $delta => $element ) {
-//              if ( is_numeric($delta) ) {
-//                $build[$field_name][$delta]['#text']
-//                  = $this->dbHtmlToViewHtml( $build[$field_name][$delta]['#text'] );
-//
-//                //Values to convert depends on what type of field it is.
-//                if ( $field_name == 'text_with_summary' ) {
-//
-//
-//                }
-//              }
-//            }
-//
-//            //Get the values.
-//            $items_to_show = $build[$field_name]['#items']->getValue();
-//            for($delta = 0; $delta < sizeof($items_to_show); $delta++) {
-//              $items_to_show[$delta]['value'] = '<p>spit</p>';
-//            }
-//            $build[$field_name]['#items']->setValue($items_to_show);
-//          }
-//        }
-//
-//      } catch (ShardException $e) {
-//        $message = t(
-//            'Problem detected during shard processing for the field %field. '
-//            . 'It has been recorded in the log. Deets:', ['%field' => $field_name])
-//          . '<br><br>' . $e->getMessage();
-//        drupal_set_message($message, 'error');
-//        \Drupal::logger('shards')->error($message);
-//      }
-//    } // End for each eligible field.
-//  }
-
   /**
    * Convert the shard tags in some HTML code from DB
    * format to view format.
@@ -795,13 +437,8 @@ class ShardTagHandler {
       $shardId = $this->domProcessor->getRequiredElementAttribute(
         $first, ShardMetadata::SHARD_ID_ATTRIBUTE);
       //Create an object to model the shard.
+      /* @var ShardModel $shard */
       $shard = \Drupal::getContainer()->get('shard.model');
-//      $shard = new ShardTagModel(
-//        \Drupal::service('shard.metadata'),
-//        \Drupal::service('entity_type.manager'),
-//        \Drupal::service('renderer'),
-//        \Drupal::service('shard.dom_processor')
-//      );
       $shard->setShardId($shardId);
       $shard->loadShardCollectionItemFromStorage($shardId);
       //Inject the HTML element to show the embed.

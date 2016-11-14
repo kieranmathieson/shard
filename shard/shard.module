@@ -178,6 +178,8 @@ function _shard_node_validate_handler($form, FormStateInterface $formState) {
   $eligibleFields = $metadata->listEligibleFieldsForNode($hostNode);
   /* @var \Drupal\shard\ShardTagHandler $tagHandler */
   $tagHandler = \Drupal::service('shard.tag_handler');
+  //No shard tags processed yet.
+  $numTagsProcessed = 0;
   foreach($eligibleFields as $fieldName) {
     try {
       $fieldValues = $formState->getValue($fieldName);
@@ -198,7 +200,8 @@ function _shard_node_validate_handler($form, FormStateInterface $formState) {
             $newShardCollectionItems, //Shard collection item data.
             $hostNid,
             $fieldName,
-            $delta
+            $delta,
+            $numTagsProcessed
           );
         } //End foreach value of the field
         //Store the changed data.
@@ -213,7 +216,7 @@ function _shard_node_validate_handler($form, FormStateInterface $formState) {
       \Drupal::logger('shards')->error($message);
     }
   } // End for each eligible field.
-  if ( $isNewNode ) {
+  if ( $isNewNode && $numTagsProcessed > 0 ) {
     //Create holder for the collected data. Passed back to module,
     //which uses it in later processing.
     $shardDataRepo = new ShardDataRepository();
@@ -290,6 +293,8 @@ function shard_node_insert(Drupal\node\NodeInterface $node) {
   }
 
 }
+
+
 
 
 

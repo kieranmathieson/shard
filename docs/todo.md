@@ -1,3 +1,14 @@
+Local content
+
+Several view modes.
+
+Move stuff to shard from sloth
+
+Work in views?
+
+
+
+
 On install, setup access to REST URLs.
 
 Timeout on AJAX calls.
@@ -30,3 +41,5 @@ Remove dependency on Rest UI.
 
 Client-side error handling
 
+When change template, need to change every insertion. Add a control 
+link to rebuild all nodes with shards.
