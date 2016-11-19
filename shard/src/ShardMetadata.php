@@ -17,7 +17,6 @@ use Drupal\Core\Entity\EntityTypeBundleInfoInterface;
 use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\Entity\EntityFieldManagerInterface;
 use Drupal\node\NodeInterface;
-//use Drupal\Component\EventDispatcher\ContainerAwareEventDispatcher;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 use Drupal\Component\Uuid\Uuid;
 
@@ -168,10 +167,10 @@ class ShardMetadata implements ShardMetadataInterface {
     //Get allowed field types.
     $this->configAllowedFieldTypes = explode(',', $this->shardConfigs->get('field_types'));
     //Ask sharders (modules that implement shards) to register.
-    $pluginRegisterEvent = new ShardPluginRegisterEvent();
-    $this->eventDispatcher->dispatch('shard.register_plugins', $pluginRegisterEvent);
+    $pluginRegisterEvent = new ShardTypeRegisterEvent();
+    $this->eventDispatcher->dispatch('shard.register_shard_types', $pluginRegisterEvent);
     //Send shard type names to metadata object.
-    $this->setShardTypeNames($pluginRegisterEvent->getRegisteredPlugins());
+    $this->setShardTypeNames($pluginRegisterEvent->getRegisteredShardTypes());
   }
 
   /**

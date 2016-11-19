@@ -4,8 +4,9 @@ namespace Drupal\shard\Controller;
 
 use Drupal\Component\Uuid\Uuid;
 use Drupal\Core\Controller\ControllerBase;
-use Drupal\Core\Entity\EntityInterface;
+//use Drupal\Core\Entity\EntityInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
+use Drupal\node\Entity\Node;
 use Drupal\shard\Exceptions\ShardException;
 use Drupal\shard\Exceptions\ShardUnexpectedValueException;
 use Drupal\shard\ShardDataRepository;
@@ -70,7 +71,7 @@ class ShardController extends ControllerBase {
     //Create the field collection items, replacing the placeholder
     //host nid with the actual value.
     $actualHostNid = $dataRepo->getActualHostNid();
-    $placeHolderHostNid = $dataRepo->getHostPlaceholderNid();
+//    $placeHolderHostNid = $dataRepo->getHostPlaceholderNid();
     $shardModels = $dataRepo->getNewShardCollectionItems();
     /* @var ShardModel  $shardModel */
     foreach ($shardModels as $shardModel) {
@@ -81,7 +82,7 @@ class ShardController extends ControllerBase {
     }
     //Now run through each of the eligible fields in the host node,
     //replacing the shard id placeholder with the real value.
-    /* @var EntityInterface $hostNode */
+    /* @var Node $hostNode */
     $hostNode = $this->entityTypeManager->getStorage('node')
       ->load($actualHostNid);
     //Make an array, key is temp id (UUID) of a shard model, value
@@ -93,7 +94,7 @@ class ShardController extends ControllerBase {
     foreach($eligibleFields as $fieldName) {
       //Does the field exist in the node? Not all eligible fields are
       //used in a every content type.
-      if ($hostNode->get($fieldName)) {
+      if ($hostNode->hasField($fieldName)) {
         try {
           $fieldValues = $hostNode->get($fieldName)->getValue();
           if ($fieldValues) {
@@ -149,9 +150,10 @@ class ShardController extends ControllerBase {
   /**
    * @param ShardModel[] $shardModels
    * @return array
+   * @throws \Drupal\shard\Exceptions\ShardUnexpectedValueException
    */
   protected function mapPlaceHolderIdsToActual($shardModels) {
-    $idmap = [];
+    $idMap = [];
     foreach ($shardModels as $shardModel) {
       $placeholder = $shardModel->getShardPlaceHolderId();
       if ( ! $shardModel->isValidPlaceHolderId($placeholder) ) {
@@ -165,9 +167,9 @@ class ShardController extends ControllerBase {
           sprintf('Bad shard id: %s', $actual)
         );
       }
-      $idmap[$placeholder] = $actual;
+      $idMap[$placeholder] = $actual;
     }
-    return $idmap;
+    return $idMap;
   }
 
 }

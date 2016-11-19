@@ -13,6 +13,7 @@ use Drupal\shard\ShardTagHandler;
 
 //use Drupal\views\ViewExecutable;
 use Drupal\sloth\Services\EligibleFields;
+use Drupal\editor\Entity\Editor;
 
 /**
  * Implements hook_help().
@@ -70,21 +71,42 @@ function sloth_preprocess(&$variables, $hook, &$info) {
           $info['theme path'] = drupal_get_path('module', 'sloth');
           $info['path'] = drupal_get_path('module', 'sloth') . '/templates';
           $info['template'] = $templateFileName;
-          $variables['dog'] = 'Oscar';
-          $variables['goats'] = ['Bilil', 'Fran'];
+          $node = $variables['node'];
+          $variables['sloth_name'] = $node->get('title')->value;
+          $variables['sloth_id'] = $node->id();
+          $variables['sloth_cuteness'] = $node->get('field_cuteness')->value;
+          $variables['sloth_notes'] = $node->get('field_sloth_notes')->value;
+          $variables['sloth_photo_url']
+            = file_create_url($node->get('field_photo')->entity->uri->value);
+          $variables['sloth_photo_alt']
+            = $node->get('field_photo')->getValue()[0]['alt'];
+
         } //End template file exists.
       } //End view mode exists.
     } //End this is a sloth.
   } //End this is a node.
 }
 
-//function sloth_preprocess(&$variables, $hook, &$info) {
-//  if ($hook == 'node' && $variables['node']->bundle() == 'sloth'
-//    && $variables['view_mode'] == 'full') {
-//    if (substr($info['theme path'], 0, 7) != 'themes/') {
-//      $info['theme path'] = drupal_get_path('module', 'sloth');
-//      $info['path'] = drupal_get_path('module', 'sloth') . '/templates';
-//      $info['template'] = 'node--sloth--full';
-//    }
-//  }
-//}
+function sloth_node_view_alter(array &$build,
+      Drupal\Core\Entity\EntityInterface $entity,
+     \Drupal\Core\Entity\Display\EntityViewDisplayInterface $display){
+  if ( isset($build['#attached']) ) {
+    $build['#attached']['library'][] = 'sloth/sloth.view';
+  }
+}
+
+/**
+ * Implements hook_ckeditor_css_alter().
+ *
+ * Injects our selected CSS sheet anytime CKEditor has loaded.
+ *
+ * @param array $css
+ * @param Drupal\editor\Entity\Editor $editor
+ */
+function sloth_ckeditor_css_alter(array &$css, Editor $editor) {
+  $css[] = base_path() . drupal_get_path('module', 'sloth') . '/css/sloth.css';
+}
+
+function sloth_form_filter_format_edit_form_alter(&$form, $formState) {
+  $form['#attached']['library'][] = 'sloth/sloth.edit';
+}

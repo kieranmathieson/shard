@@ -8,12 +8,15 @@
 (function ($, Drupal) {
 
   "use strict";
+    var r;
+    r=3;
 
-  Drupal.SlothSpace.collections.Pack = Backbone.Collection.extend({
-      model: Drupal.SlothSpace.models.Sloth,
-      url: function(){
-        return '/shard/index/sloth?_format=json';
-      }
-  });
+
+    // Drupal.SlothSpace.collections.Pack = Backbone.Collection.extend({
+  //     model: Drupal.SlothSpace.models.Sloth,
+  //     url: function(){
+  //       return '/shard/index/sloth?_format=json';
+  //     }
+  // });
 
 })(jQuery, Drupal);

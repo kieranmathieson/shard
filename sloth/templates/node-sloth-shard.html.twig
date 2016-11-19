@@ -1,9 +1,9 @@
-
 <div class="sloth-embed">
-    <div class="sloth-photo">{{ content.field_photo }}</div>
-    <p><strong>{{ content.title }}</strong></p>
-    <p>Cuteness: {{ content.field_cuteness }}</p>
-    <p class="sloth-notes">{{ content.field_sloth_notes }}</p>
+    <div class="sloth-photo"><img src="{{ sloth_photo_url }}" alt="{{ sloth_photo_alt }}"></div>
+    <p><strong><a href="node/{{ sloth_id }}">{{ sloth_name }}</a></strong></p>
+    <p>Cuteness: {{ sloth_cuteness }}</p>
+    <p class="sloth-notes">{{ sloth_notes|raw }}</p>
+    <div class="local-content"></div>
 </div>
 
 

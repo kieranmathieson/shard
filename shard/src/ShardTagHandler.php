@@ -28,7 +28,7 @@ use Drupal\Component\Uuid\Php;
 //use Drupal\Core\Form\FormStateInterface;
 
 use Symfony\Component\EventDispatcher\EventDispatcher;
-use Drupal\shard\ShardModel;
+//use Drupal\shard\ShardModel;
 
 class ShardTagHandler {
 
@@ -102,7 +102,6 @@ class ShardTagHandler {
    * ShardTagHandler constructor.
    *
    * Load shard configuration data set by admin.
-   * @param \Symfony\Component\DependencyInjection\ContainerInterface $container
    * @param \Drupal\shard\ShardMetadataInterface $metadata
    * @param \Drupal\shard\ShardDomProcessor|\Drupal\shard\ShardDomProcessorInterface $domProcessor
    * @param \Drupal\Core\Entity\EntityTypeManagerInterface $entity_type_manager
@@ -209,7 +208,6 @@ class ShardTagHandler {
    * @param ShardModel[] $newShardCollectionItems Deets for shard collection
    *        items for a new host node, to be saved once the host node's nid
    *        is known.
-   * @param \DOMDocument $domDocument
    * @param $hostNid
    * @param $fieldName
    * @param $delta
@@ -263,31 +261,30 @@ class ShardTagHandler {
   }
 
   /**
-   * Inside an element, append a wrapper div with the class local-content,
-   * that has inside it the contents of $local_content.
+   * Inside HTML inside an element.
    *
    * @param \DOMElement $element
    * @param string $local_content
    */
   protected function insertLocalContentDb(\DOMElement $element, $local_content ) {
     if ( $local_content ) {
-      //Make the local content wrapper that shards expect.
-      $local_content_wrapper = $element->ownerDocument->createElement('div');
-      $local_content_wrapper->setAttribute(
-        'class', ShardMetadata::SHARD_LOCAL_CONTENT_CLASS);
-      //Parse the content to add inside the wrapper.
+//      //Make the local content wrapper that shards expect.
+//      $local_content_wrapper = $element->ownerDocument->createElement('div');
+//      $local_content_wrapper->setAttribute(
+//        'class', ShardMetadata::SHARD_LOCAL_CONTENT_CLASS);
+//      //Parse the content to add inside the wrapper.
       //Add a temp wrapper to make the local content easier to find (see below).
       $local_content = '<div id="local_content_wrapper_of_shards">' . $local_content . '</div>';
       $doc = $this->domProcessor->createDomDocumentFromHtml($local_content);
       $temp_wrapper = $doc->getElementById('local_content_wrapper_of_shards');
       //Append all the children of the local content to the wrapper element.
       foreach( $temp_wrapper->childNodes as $child_node ) {
-        $local_content_wrapper->appendChild(
+        $element->appendChild(
           $element->ownerDocument->importNode($child_node, TRUE)
         );
       }
       //Now append the local content wrapper to the target element.
-      $element->appendChild($local_content_wrapper);
+//      $element->appendChild($local_content_wrapper);
     }
   }
 
@@ -367,7 +364,7 @@ class ShardTagHandler {
     $localContentElement
       = $this->domProcessor->findElementWithLocalContent($element);
     if ( $localContentElement ) {
-      $localContent = $this->domProcessor->getElementInnerHtml($localContentElement);
+      $localContent = trim($this->domProcessor->getElementInnerHtml($localContentElement));
     }
     else {
       $localContent = '';
@@ -408,6 +405,8 @@ class ShardTagHandler {
     $wrapperDiv = $domDocument->getElementById($outerWrapperTagId);
     //Process the first shard tag found. Recurse while there are more.
     $this->dbHtmlToViewHtmlProcessOneTag($wrapperDiv);
+    //Strip out indicators that tags are processed.
+    $this->domProcessor->stripProcessedMarkers($wrapperDiv);
     //Get the new content.
     $result = $domDocument->getElementById($outerWrapperTagId);
     $viewHtml = $domDocument->saveHTML($result);
@@ -488,46 +487,6 @@ class ShardTagHandler {
     return false;
   }
 
-//  /**
-//   * Get a shard id from a tag.
-//   *
-//   * @param \DOMElement $element The tag.
-//   * @return string The shard id.
-//   * @throws \Drupal\shard\Exceptions\ShardBadDataTypeException
-//   * @throws \Drupal\shard\Exceptions\ShardMissingDataException
-//   */
-//  protected function getShardId(\DOMElement $element) {
-//    $shard_id = $element->getAttribute('data-shard-id');
-//    if ( ! $shard_id ) {
-//      throw new ShardMissingDataException('Shard id missing for shard DB tag.');
-//    }
-//    if ( ! is_numeric($shard_id) ) {
-//      throw new ShardBadDataTypeException(
-//        sprintf('Argh! Shard id is not numeric: %s.', $shard_id)
-//      );
-//    }
-//    return $shard_id;
-//  }
-
-//  /**
-//   * Get the value of a required field from a shard.
-//   *
-//   * @param FieldCollectionItem $shard Field collection item
-//   *        with shard insertion data.
-//   * @param string $field_name Name of the field whose value is needed.
-//   * @return mixed Field's value.
-//   * @throws \Drupal\shard\Exceptions\ShardMissingDataException
-//   */
-//  protected function getRequiredShardValue(FieldCollectionItem $shard, $field_name) {
-//    $value = $shard->{$field_name}->getString();
-//    if ( strlen($value) == 0 ) {
-//      throw new ShardMissingDataException(
-//        sprintf('Missing required shard field value: %s', $field_name)
-//      );
-//    }
-//    return $value;
-//  }
-//
   /**
    * Add local content to HTML of a view of a shard.
    * The view HTML must has a div with the class local-content.
@@ -675,6 +634,8 @@ class ShardTagHandler {
     $wrapperDiv = $domDocument->getElementById($outerWrapperTagId);
     //Process the first shard tag found. Recurse while there are more.
     $this->dbHtmlToCkHtmlProcessOneTag($wrapperDiv);
+    //Strip out indicators that tags are processed.
+    $this->domProcessor->stripProcessedMarkers($wrapperDiv);
     //Get the new content.
     $result = $domDocument->getElementById($outerWrapperTagId);
     $ckHtml = $domDocument->saveHTML( $result );

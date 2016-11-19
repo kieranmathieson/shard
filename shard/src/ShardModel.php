@@ -474,7 +474,9 @@ class ShardModel {
         ShardMetadata::FIELD_NAME_HOST_NODE_ID
       )
     );
-    $this->setGuestNid($shardId);
+    //Here, host id is the host of the field collection, which, in shard
+    //lingo, is the guest node.
+    $this->setGuestNid($fieldCollectionEntity->getHostId());
     /* @var \Drupal\Core\Entity\EntityInterface $guestNode */
     $guestNode = $this->loadGuestNodeFromStorage();
     $this->setShardType($guestNode->bundle());
@@ -718,6 +720,9 @@ class ShardModel {
       } //End there is a local content container in the HTML returned
         //from rendering.
     } //End there is local content.
+    //Remove the children of the shard tag. It's in DB format, and contains
+    //the local content as a child.
+    $this->domProcessor->removeElementChildren($shardTagElement);
     //Inject the content in $domDocForGuestViewExLocalContent
     //into $shardTagElement.
     $this->domProcessor->copyElementChildren(

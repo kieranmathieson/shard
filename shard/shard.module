@@ -113,28 +113,6 @@ function shard_form_alter(&$form, FormStateInterface $formState, $form_id) {
   } //End this is an entity form.
 }
 
-
-/**
- * Runs after a node with eligible shard fields is submitted.
- *
- * @param $form
- * @param \Drupal\Core\Form\FormStateInterface $form_state
- */
-//function _shard_node_edit_submit_handler($form, FormStateInterface $form_state) {
-//  //If this is called during testing, skip it.
-//  if ( array_key_exists('simpletest.settings', $GLOBALS['conf']) ) {
-//    return;
-//  }
-//  /* @var \Drupal\shard\ShardDataRepository $shardDataRepo  */
-//  global $shardDataRepo;
-//  $shardDataRepo = NULL;
-//  $container = \Drupal::getContainer();
-//  $shardTagHandler = $container->get('shard.tag_handler');
-//  $shardDataRepo = $shardTagHandler->formCkTagsToDbTags($form_state);
-//
-//}
-
-
 /**
  * Convert shard tags from their CKEditor version to their DB storage
  * version for all eligible fields in $entity. Called by a hook in
@@ -227,7 +205,6 @@ function _shard_node_validate_handler($form, FormStateInterface $formState) {
     //Save it.
     $metadata->stashStringInConFig(
       ShardMetadata::SHARD_NODE_SAVE_DATA_REPO, $shardDataRepo->serialize());
-//    $formState->setRedirect('shard.process_saved_nodes');
     $x = Url::fromRoute('shard.process_saved_nodes');
     $url = $x->toString();
     $response = new RedirectResponse($url);
@@ -246,7 +223,7 @@ function _shard_node_validate_handler($form, FormStateInterface $formState) {
  * @return int[] Ids.
  */
 function shard_get_shard_item_ids_for_host_node($hostNid){
-  /* @var \Drupal\Core\Entity\Query\QueryFactory */
+  /* @var \Drupal\Core\Entity\Query\QueryFactory $queryService*/
   $queryService = \Drupal::service('entity.query');
   $query = $queryService->get('field_collection_item')
     ->condition('field_host_node', $hostNid);
@@ -259,6 +236,7 @@ function shard_erase_old_shards($oldShardIds) {
   //Erase old shards.
   $itemsToDelete = \Drupal::service('entity_type.manager')->
     getStorage('field_collection_item')->loadMultiple($oldShardIds);
+  /* @var \Drupal\Core\Entity\Entity $item */
   foreach ($itemsToDelete as $item) {
     $item->delete();
   }

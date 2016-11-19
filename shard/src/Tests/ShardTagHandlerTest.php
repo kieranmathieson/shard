@@ -11,7 +11,12 @@ namespace Drupal\shard\Tests;
 
 use Drupal\shard\ShardTagHandler;
 use Drupal\simpletest\WebTestBase;
-
+/**
+ * Provides automated tests for the Shard tag handler class.
+ *
+ * @group shard
+ *
+ */
 class ShardTagHandlerTest extends WebTestBase {
 
   public static $modules = array('shard', 'field', 'field_collection',

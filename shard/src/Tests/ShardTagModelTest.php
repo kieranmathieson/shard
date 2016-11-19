@@ -23,6 +23,7 @@ use Symfony\Component\DependencyInjection\Container;
  * Provides automated tests for the Shard class.
  *
  * @group shard
+ *
  */
 class ShardTagModelTest extends WebTestBase {
 

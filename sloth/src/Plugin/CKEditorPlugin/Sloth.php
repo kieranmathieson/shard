@@ -69,7 +69,7 @@ class Sloth extends CKEditorPluginBase {
    * Load files defined in the library, by sloth.libraries.yml.
    */
   public function getLibraries(Editor $editor) {
-    return [ 'sloth/sloth', ];
+    return [ 'sloth/sloth.edit', 'sloth/sloth.view', ];
   }
 
 }

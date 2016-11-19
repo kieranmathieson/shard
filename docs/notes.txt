@@ -1,17 +1,9 @@
-View host nodes:
-    Supply HTML for view mode
-    Respond to event, if needed. Code is in the filter.
-        After translation is finished
+When QuickEdit is enabled, rebuilding cache causes Internal::generateFormatTagsSetting to
+run a bunch o' times, generating calls to the shard filter. When developing, uninstall
+QuickEdit.
 
+Changing an input format (like Basic HTML) causes Internal::generateFormatTagsSetting to run
+in the same way.
 
-DB to CK:
-    Supply HTML that includes widgety class.
-    Supply server-side class for CK plugin.
-    Callbacks for dialog
-        Resty
-    Hooks:
-        After HTML preped
-        Include extra client-side files.
-
-CK to db:
+Add this to list of allowed tags in the limit HTML tags filter:  <div data-* class="">
 

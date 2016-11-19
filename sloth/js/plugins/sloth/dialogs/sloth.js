@@ -15,7 +15,6 @@
   CKEDITOR.dialog.add('sloth', function (editor) {
     // var lang = editor.lang.admonition;
     return {
-
       // Basic properties of the dialog window: title, minimum size.
       title: "Sloth", //lang.dialogTitle,
       minWidth: 200,
@@ -46,9 +45,9 @@
               items: Drupal.SlothSpace.slothOptions,
               default: Drupal.SlothSpace.slothOptions[0][1],
               setup: function( widget ) {
-                if ( widget.data.slothId && widget.data.slothId != 'empty'){
-                  // console.log('Sloth field setup for: ' + widget.data.slothId);
-                  this.setValue(widget.data.slothId);
+                if ( widget.data.guestId && widget.data.guestId != 'empty'){
+                  // console.log('Sloth field setup for: ' + widget.data.guestId);
+                  this.setValue(widget.data.guestId);
                 }
                 else {
                   this.setValue(this.default);
@@ -67,7 +66,10 @@
                   });
               },
               commit: function( widget ) {
-                widget.setData( 'slothId', this.getValue() );
+                //Pass the guest id back to the widget.
+                widget.setData( 'guestId', this.getValue() );
+                //Pass the preview loaded from the server back to the widget.
+                widget.setData('preview', editor.SlothSpace.previewElement.html());
               },
               loadPreview: function(selectedModel, viewMode) {
                 // console.log('Start sloth load preview');
@@ -163,11 +165,11 @@
         else {
           editor.SlothSpace.currentViewMode = viewModeWidget.getValue();
         }
-      },
-      onOk: function(){
-        //Stash the current preview for the caller to grab.
-        editor.SlothSpace.currentPreview = editor.SlothSpace.previewElement.html();
-      }
+      } //,
+      // onOk: function(){
+      //   //Stash the current preview for the caller to grab.
+      //   editor.SlothSpace.currentPreview = editor.SlothSpace.previewElement.html();
+      // }
     };
   });
 

@@ -353,10 +353,8 @@ class ShardDomProcessor implements ShardDomProcessorInterface {
    * @return bool|\DOMElement Element with local content, false if not found.
    */
   public function findElementWithLocalContent(\DOMElement $element) {
-    if ( $element->tagName == 'div'
-        && $element->hasAttribute('class')
-        && $element->getAttribute('class') == 'local-content') {
-        return $element;
+    if ( $this->hasCssClass($element, ShardMetadata::SHARD_LOCAL_CONTENT_CLASS) ) {
+      return $element;
     }
     foreach( $element->childNodes as $child ) {
       if ( get_class($child) == 'DOMElement' ) {
@@ -366,7 +364,23 @@ class ShardDomProcessor implements ShardDomProcessorInterface {
         }
       }
     }
-    return false;
+    return FALSE;
+  }
+
+  /**
+   * Does an element have a CSS class?
+   *
+   * @param \DOMElement $element
+   * @param string $class Class to check for.
+   * @return bool True if has class.
+   */
+  public function hasCssClass(\DOMElement $element, $class) {
+    if ( ! $element->hasAttribute('class') ) {
+      return FALSE;
+    }
+    $classList = $element->getAttribute('class');
+    $classes = explode(' ', $classList);
+    return in_array($class, $classes);
   }
 
   /**

@@ -8,11 +8,14 @@
 
   "use strict";
 
-  Drupal.SlothSpace.collections.Folio = Backbone.Collection.extend({
-      model: Drupal.SlothSpace.models.ViewMode,
-      url: function(){
-        return '/shard/view-modes?_format=json';
-      }
-  });
+    var r;
+    r=3;
+
+  // Drupal.SlothSpace.collections.Folio = Backbone.Collection.extend({
+  //     model: Drupal.SlothSpace.models.ViewMode,
+  //     url: function(){
+  //       return '/shard/view-modes?_format=json';
+  //     }
+  // });
 
 })(jQuery, Drupal);

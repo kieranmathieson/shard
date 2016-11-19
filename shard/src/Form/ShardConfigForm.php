@@ -11,7 +11,7 @@ namespace Drupal\shard\Form;
 use Drupal\Core\Entity\EntityTypeBundleInfoInterface;
 use Drupal\Core\Form\FormBase;
 use Drupal\Core\Form\FormStateInterface;
-use Drupal\shard\ShardPluginRegisterEvent;
+use Drupal\shard\ShardTypeRegisterEvent;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Drupal\Core\Entity\EntityFieldManagerInterface;
 use Drupal\Core\Entity\EntityDisplayRepositoryInterface;
@@ -69,10 +69,10 @@ class ShardConfigForm extends FormBase {
     $this->typed_data_manager = $typed_data_manager;
     $this->eventDispatcher = $eventDispatcher;
     //Ask sharders (modules that implement shards) to register.
-    $pluginRegisterEvent = new ShardPluginRegisterEvent();
+    $pluginRegisterEvent = new ShardTypeRegisterEvent();
     $this->eventDispatcher->dispatch('shard.register_plugins', $pluginRegisterEvent);
     //Send shard type names to metadata object.
-    $this->registeredShardTypes = $pluginRegisterEvent->getRegisteredPlugins();
+    $this->registeredShardTypes = $pluginRegisterEvent->getRegisteredShardTypes();
   }
 
   public static function create(ContainerInterface $container) {

@@ -10,8 +10,12 @@
 
   "use strict";
 
-  Drupal.SlothSpace.collections.Album = Backbone.Collection.extend({
-      model: Drupal.SlothSpace.models.Preview
-  });
+    var r;
+    r=3;
+
+
+  //   Drupal.SlothSpace.collections.Album = Backbone.Collection.extend({
+  //     model: Drupal.SlothSpace.models.Preview
+  // });
 
 })(jQuery, Drupal);

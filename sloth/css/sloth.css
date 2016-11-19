@@ -6,7 +6,9 @@
     -webkit-border-radius: 8px;
     -moz-border-radius: 8px;
     border-radius: 8px;
-    border: 2px gray;
+    border-width: 2px;
+    border-color: gray;
+    border-style: solid;
     padding: 8px;
 }
 .sloth-photo {
@@ -16,4 +18,13 @@
 }
 .sloth-notes {
     clear: left;
+}
+
+.sloth-embed .local-content {
+    border-radius: 8px;
+    border-width: 2px;
+    border-color: green;
+    border-style: solid;
+    padding: 8px;
+    color: green;
 }
